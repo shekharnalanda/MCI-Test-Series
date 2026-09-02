@@ -74,6 +74,9 @@ class TrustedSourceHealthService
             'checked_at' => $checkedAt,
         ]);
 
+        $this->updateQuarantineState($source, $healthy, $reason, $checkedAt);
+        $source->refresh();
+
         return [
             'check_id' => $check->id,
             'source_id' => $source->id,
@@ -84,6 +87,43 @@ class TrustedSourceHealthService
             'checked_at' => $source->last_checked_at,
             'last_success_at' => $source->last_success_at,
         ];
+    }
+
+
+    private function updateQuarantineState(
+        ContentSource $source,
+        bool $healthy,
+        string $reason,
+        mixed $checkedAt
+    ): void {
+        if ($source->source_type === 'internal') {
+            return;
+        }
+
+        if ($healthy) {
+            if ($source->is_quarantined) {
+                $source->forceFill([
+                    'is_quarantined' => false,
+                    'quarantined_at' => null,
+                    'quarantine_reason' => null,
+                ])->save();
+            }
+
+            return;
+        }
+
+        $recentChecks = $source->healthChecks()
+            ->latest('checked_at')
+            ->limit(3)
+            ->pluck('healthy');
+
+        if ($recentChecks->count() === 3 && $recentChecks->every(fn ($value) => ! $value)) {
+            $source->forceFill([
+                'is_quarantined' => true,
+                'quarantined_at' => $source->quarantined_at ?? $checkedAt,
+                'quarantine_reason' => $reason,
+            ])->save();
+        }
     }
 
     private function isSecureUrl(?string $url): bool

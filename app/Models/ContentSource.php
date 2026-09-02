@@ -16,6 +16,8 @@ class ContentSource extends Model
             'allow_question_generation' => 'boolean',
             'auto_publish_allowed' => 'boolean',
             'is_active' => 'boolean',
+            'is_quarantined' => 'boolean',
+            'quarantined_at' => 'datetime',
             'last_checked_at' => 'datetime',
             'last_success_at' => 'datetime',
         ];

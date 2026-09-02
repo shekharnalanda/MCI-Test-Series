@@ -17,6 +17,10 @@ class TrustedSourcePolicy
             $reasons[] = 'source_inactive';
         }
 
+        if ($source->is_quarantined) {
+            $reasons[] = 'source_quarantined';
+        }
+
         if ((int) $source->trust_score < self::MIN_QUESTION_TRUST) {
             $reasons[] = 'trust_score_below_90';
         }
