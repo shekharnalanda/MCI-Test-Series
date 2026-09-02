@@ -76,3 +76,11 @@ Schedule::command(
     ->everyFifteenMinutes()
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(20);
+
+
+Schedule::command(
+    'question-bank:audit-import-quality --hours=24 --strict'
+)
+    ->dailyAt('02:25')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
