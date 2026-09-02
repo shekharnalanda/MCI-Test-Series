@@ -52,3 +52,11 @@ Schedule::command(
     ->weeklyOn(1, '02:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
+
+
+Schedule::command(
+    'question-bank:prune-source-checks --days=90'
+)
+    ->weeklyOn(0, '02:20')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
