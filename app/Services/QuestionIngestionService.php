@@ -97,6 +97,10 @@ class QuestionIngestionService
                         'topic_id' => $item['topic_id'] ?? null,
 
                         'content_source_id' => $source?->id,
+                    'source_url' => $item['source_url'] ?? null,
+                    'source_reference' => $item['source_reference'] ?? null,
+                    'source_published_at' => $item['source_published_at'] ?? null,
+                    'imported_at' => now(),
                         'question_import_batch_id' => $batch->id,
 
                         'question_text' => $text,
@@ -119,7 +123,6 @@ class QuestionIngestionService
                             $source?->name ??
                             ($item['source_name'] ?? 'Internal'),
 
-                        'source_url' => $item['source_url'] ?? null,
 
                         'source_confidence' => $trust,
 

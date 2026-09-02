@@ -22,6 +22,8 @@ class Question extends Model
             'is_published' => 'boolean',
             'is_active' => 'boolean',
             'verified_at' => 'datetime',
+            'source_published_at' => 'datetime',
+            'imported_at' => 'datetime',
             'published_at' => 'datetime',
         ];
     }
