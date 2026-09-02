@@ -24,6 +24,19 @@ class TrustedSourcePolicy
         if (! $source->allow_question_generation) {
             $reasons[] = 'question_generation_not_allowed';
         }
+        if ($source->source_type !== 'internal') {
+            $latestCheck = $source->healthChecks()->latest('checked_at')->first();
+            $healthCutoff = now()->subHours(24);
+
+            if (! $latestCheck && $source->created_at?->lt($healthCutoff)) {
+                $reasons[] = 'health_check_missing';
+            } elseif ($latestCheck && $latestCheck->checked_at->lt($healthCutoff)) {
+                $reasons[] = 'health_check_stale';
+            } elseif ($latestCheck && ! $latestCheck->healthy) {
+                $reasons[] = 'health_check_failed';
+            }
+        }
+
 
         if ($source->source_type !== 'internal') {
             if (! $this->isSecureUrl($source->base_url)) {
