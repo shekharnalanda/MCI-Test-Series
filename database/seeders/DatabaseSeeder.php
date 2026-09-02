@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             PackageSeeder::class,
             AdminUserSeeder::class,
             ContentSourceSeeder::class,
+            TopicTaxonomySeeder::class,
             DemoTestSeeder::class,
         ]);
     }
