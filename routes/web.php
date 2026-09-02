@@ -4,6 +4,7 @@ use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AdmissionController as AdminAdmissionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\CurrentAffairsController as AdminCurrentAffairsController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\TestController as StudentTestController;
 use Illuminate\Support\Facades\Route;
@@ -72,6 +73,26 @@ Route::middleware(['auth', 'role:admin'])
     ->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get(
+            '/current-affairs',
+            [AdminCurrentAffairsController::class, 'index']
+        )->name('current-affairs.index');
+
+        Route::get(
+            '/current-affairs/{currentAffair}',
+            [AdminCurrentAffairsController::class, 'show']
+        )->name('current-affairs.show');
+
+        Route::post(
+            '/current-affairs/{currentAffair}/approve',
+            [AdminCurrentAffairsController::class, 'approve']
+        )->name('current-affairs.approve');
+
+        Route::post(
+            '/current-affairs/{currentAffair}/reject',
+            [AdminCurrentAffairsController::class, 'reject']
+        )->name('current-affairs.reject');
 
         Route::get('/admissions', [AdminAdmissionController::class, 'index'])
             ->name('admissions.index');

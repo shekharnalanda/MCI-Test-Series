@@ -17,4 +17,8 @@
 <a class="btn" href="{{ route('admin.admissions.index') }}">
 Manage Admissions
 </a>
+
+<a class="btn" href="{{ route('admin.current-affairs.index') }}">
+Current Affairs Review
+</a>
 @endsection

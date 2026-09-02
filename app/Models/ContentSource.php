@@ -30,4 +30,9 @@ class ContentSource extends Model
     {
         return $this->hasMany(QuestionImportBatch::class);
     }
+
+    public function currentAffairs(): HasMany
+    {
+        return $this->hasMany(CurrentAffairItem::class);
+    }
 }
