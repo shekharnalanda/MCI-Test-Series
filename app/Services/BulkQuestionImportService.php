@@ -8,7 +8,8 @@ use RuntimeException;
 class BulkQuestionImportService
 {
     public function __construct(
-        private QuestionIngestionService $ingestion
+        private QuestionIngestionService $ingestion,
+        private TrustedSourcePolicy $sourcePolicy
     ) {}
 
     public function importJsonFile(
@@ -16,7 +17,13 @@ class BulkQuestionImportService
         ContentSource $source,
         int $chunkSize = 500
     ): array {
-        if (!is_file($path)) {
+        if (! $this->sourcePolicy->canGenerateQuestions($source)) {
+            throw new RuntimeException(
+                'Source is not approved by the MCI trusted-source policy.'
+            );
+        }
+
+        if (! is_file($path)) {
             throw new RuntimeException(
                 "Import file not found: {$path}"
             );
