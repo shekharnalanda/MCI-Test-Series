@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Admin\AdmissionController as AdminAdmissionController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
+use App\Http\Controllers\Student\TestController as StudentTestController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
@@ -45,6 +46,24 @@ Route::middleware(['auth', 'role:student'])
     ->group(function () {
         Route::get('/dashboard', [StudentDashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get('/tests', [StudentTestController::class, 'index'])
+            ->name('tests.index');
+
+        Route::post('/tests/{test}/start', [StudentTestController::class, 'start'])
+            ->name('tests.start');
+
+        Route::get('/attempts/{attempt}', [StudentTestController::class, 'show'])
+            ->name('attempts.show');
+
+        Route::post('/attempts/{attempt}/answer', [StudentTestController::class, 'answer'])
+            ->name('attempts.answer');
+
+        Route::post('/attempts/{attempt}/submit', [StudentTestController::class, 'submit'])
+            ->name('attempts.submit');
+
+        Route::get('/attempts/{attempt}/result', [StudentTestController::class, 'result'])
+            ->name('attempts.result');
     });
 
 Route::middleware(['auth', 'role:admin'])

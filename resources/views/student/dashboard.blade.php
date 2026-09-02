@@ -48,7 +48,10 @@
 
 <div class="card">
 <h3>My Test Series</h3>
-<p>Your assigned test packages will appear here.</p>
+<p>Your assigned and available tests appear here.</p>
+<a class="btn" href="{{ route('student.tests.index') }}">
+Open Tests
+</a>
 </div>
 
 <div class="card">
