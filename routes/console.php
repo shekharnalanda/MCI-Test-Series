@@ -60,3 +60,11 @@ Schedule::command(
     ->weeklyOn(0, '02:20')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
+
+
+Schedule::command(
+    'question-bank:source-health-report --hours=24 --fail-on-unhealthy'
+)
+    ->dailyAt('02:10')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
