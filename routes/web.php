@@ -1,7 +1,72 @@
 <?php
 
+use App\Http\Controllers\AdmissionController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\AdmissionController as AdminAdmissionController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
+Route::view('/', 'home')->name('home');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('login.submit');
+
+    Route::get('/admission', [AdmissionController::class, 'create'])
+        ->name('admission.create');
+
+    Route::post('/admission/send-otp', [AdmissionController::class, 'sendOtp'])
+        ->middleware('throttle:3,10')
+        ->name('admission.send-otp');
+
+    Route::post('/admission/verify-otp', [AdmissionController::class, 'verifyOtp'])
+        ->middleware('throttle:10,10')
+        ->name('admission.verify-otp');
+
+    Route::post('/admission', [AdmissionController::class, 'store'])
+        ->name('admission.store');
+
+    Route::get(
+        '/admission/success/{application}',
+        [AdmissionController::class, 'success']
+    )->name('admission.success');
 });
+
+Route::post('/logout', [AuthController::class, 'logout'])
+    ->middleware('auth')
+    ->name('logout');
+
+Route::middleware(['auth', 'role:student'])
+    ->prefix('student')
+    ->name('student.')
+    ->group(function () {
+        Route::get('/dashboard', [StudentDashboardController::class, 'index'])
+            ->name('dashboard');
+    });
+
+Route::middleware(['auth', 'role:admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+            ->name('dashboard');
+
+        Route::get('/admissions', [AdminAdmissionController::class, 'index'])
+            ->name('admissions.index');
+
+        Route::get('/admissions/{application}', [AdminAdmissionController::class, 'show'])
+            ->name('admissions.show');
+
+        Route::post(
+            '/admissions/{application}/approve',
+            [AdminAdmissionController::class, 'approve']
+        )->name('admissions.approve');
+
+        Route::post(
+            '/admissions/{application}/reject',
+            [AdminAdmissionController::class, 'reject']
+        )->name('admissions.reject');
+    });

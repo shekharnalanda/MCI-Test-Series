@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             ExamMasterSeeder::class,
             ImportantExamSeeder::class,
             PackageSeeder::class,
+            AdminUserSeeder::class,
         ]);
     }
 }
