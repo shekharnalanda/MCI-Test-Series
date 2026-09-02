@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             ImportantExamSeeder::class,
             PackageSeeder::class,
             AdminUserSeeder::class,
+            ContentSourceSeeder::class,
             DemoTestSeeder::class,
         ]);
     }

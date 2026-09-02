@@ -21,7 +21,22 @@ class Question extends Model
             'auto_publish' => 'boolean',
             'is_published' => 'boolean',
             'is_active' => 'boolean',
+            'verified_at' => 'datetime',
+            'published_at' => 'datetime',
         ];
+    }
+
+    public function source(): BelongsTo
+    {
+        return $this->belongsTo(ContentSource::class, 'content_source_id');
+    }
+
+    public function importBatch(): BelongsTo
+    {
+        return $this->belongsTo(
+            QuestionImportBatch::class,
+            'question_import_batch_id'
+        );
     }
 
     public function subject(): BelongsTo
