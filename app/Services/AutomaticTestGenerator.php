@@ -132,6 +132,8 @@ class AutomaticTestGenerator
 
             $test->questions()->sync($sync);
 
+            Question::whereKey($questions->modelKeys())->increment("usage_count");
+
             return $test->fresh([
                 'questions',
                 'exam',

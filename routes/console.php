@@ -92,3 +92,11 @@ Schedule::command(
     ->dailyAt('02:35')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
+
+
+Schedule::command(
+    'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice'
+)
+    ->dailyAt('03:00')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(45);
