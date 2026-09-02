@@ -68,3 +68,11 @@ Schedule::command(
     ->dailyAt('02:10')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
+
+
+Schedule::command(
+    'question-bank:recover-imports --stale-minutes=30'
+)
+    ->everyFifteenMinutes()
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(20);
