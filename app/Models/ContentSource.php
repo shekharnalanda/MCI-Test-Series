@@ -35,4 +35,9 @@ class ContentSource extends Model
     {
         return $this->hasMany(CurrentAffairItem::class);
     }
+
+    public function healthChecks(): HasMany
+    {
+        return $this->hasMany(ContentSourceCheck::class);
+    }
 }
