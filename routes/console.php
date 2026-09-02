@@ -84,3 +84,11 @@ Schedule::command(
     ->dailyAt('02:25')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
+
+
+Schedule::command(
+    'question-bank:audit-bilingual --strict'
+)
+    ->dailyAt('02:35')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
