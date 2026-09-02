@@ -38,3 +38,17 @@ Schedule::command(
 )
     ->monthlyOn(1, '06:30')
     ->withoutOverlapping();
+
+Schedule::command(
+    'question-bank:check-sources --fail-on-error'
+)
+    ->dailyAt('01:45')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
+
+Schedule::command(
+    'question-bank:audit-sources --strict'
+)
+    ->weeklyOn(1, '02:00')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(30);
