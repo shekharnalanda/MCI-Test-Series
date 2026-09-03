@@ -59,6 +59,7 @@ run_test 6 tests/Feature/LargeQuestionBankTest.php
 run_test 7 tests/Feature/QuestionIngestionTrustedSourceGateTest.php
 run_test 8 tests/Feature/TrustedSourceQuarantineTest.php
 run_test 9 tests/Feature/BulkQuestionImportSourceRevalidationTest.php
+run_test 10 tests/Feature/ReportFailedQuestionImportsTest.php
 
 echo
 echo "========================================"
