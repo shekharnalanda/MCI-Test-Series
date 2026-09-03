@@ -12,7 +12,8 @@ use RuntimeException;
 class QuestionIngestionService
 {
     public function __construct(
-        private QuestionFingerprintService $fingerprints
+        private QuestionFingerprintService $fingerprints,
+        private readonly TrustedSourcePolicy $sourcePolicy
     ) {}
 
     public function ingest(
@@ -88,6 +89,7 @@ class QuestionIngestionService
 
                     $canAutoPublish =
                         $source &&
+                $this->sourcePolicy->canAutoPublishQuestions($source) &&
                         $source->auto_publish_allowed &&
                         $trust >= 90 &&
                         $quality >= 90;

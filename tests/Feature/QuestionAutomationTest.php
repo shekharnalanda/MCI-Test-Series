@@ -22,7 +22,7 @@ class QuestionAutomationTest extends TestCase
 
         $source = ContentSource::where(
             'slug',
-            'mci-internal-verified'
+            'press-information-bureau'
         )->firstOrFail();
 
         $subject = Subject::where(

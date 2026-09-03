@@ -59,6 +59,10 @@ class TrustedSourcePolicy
 
         return [
             'trusted_for_questions' => $reasons === [],
+                'trusted_for_question_auto_publish' => $reasons === []
+                    && $source->allow_question_generation
+                    && $source->auto_publish_allowed
+                    && (int) $source->trust_score >= self::MIN_AUTO_PUBLISH_TRUST,
             'trusted_for_auto_publish' => $reasons === []
                 && $source->allow_current_affairs
                 && $source->auto_publish_allowed
@@ -70,6 +74,11 @@ class TrustedSourcePolicy
     public function canGenerateQuestions(ContentSource $source): bool
     {
         return $this->audit($source)['trusted_for_questions'];
+    }
+
+    public function canAutoPublishQuestions(ContentSource $source): bool
+    {
+        return $this->audit($source)['trusted_for_question_auto_publish'];
     }
 
     public function canAutoPublishCurrentAffairs(ContentSource $source): bool
