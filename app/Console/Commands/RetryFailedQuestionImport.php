@@ -56,7 +56,7 @@ class RetryFailedQuestionImport extends Command
             $batch->update([
                 'received_count' => $result['received'] ?? $batch->received_count,
                 'accepted_count' => $result['accepted'] ?? $batch->accepted_count,
-                'duplicate_count' => $result['duplicate'] ?? $batch->duplicate_count,
+                'duplicate_count' => $result['duplicates'] ?? $batch->duplicate_count,
                 'rejected_count' => $result['rejected'] ?? $batch->rejected_count,
                 'status' => 'completed',
                 'error_message' => null,

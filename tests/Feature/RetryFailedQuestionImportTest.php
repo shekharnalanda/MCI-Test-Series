@@ -53,7 +53,7 @@ class RetryFailedQuestionImportTest extends TestCase
             ->andReturn([
                 'received' => 2,
                 'accepted' => 2,
-                'duplicate' => 0,
+                'duplicates' => 0,
                 'rejected' => 0,
             ]);
         $this->app->instance(BulkQuestionImportService::class, $service);
