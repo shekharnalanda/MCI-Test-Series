@@ -68,6 +68,14 @@ class BulkQuestionImportService
             array_chunk($items, $chunkSize)
             as $chunk
         ) {
+            $freshSource = $source->fresh() ?? $source;
+
+            if (! $this->sourcePolicy->canGenerateQuestions($freshSource)) {
+                throw new RuntimeException(
+                    'Source is no longer approved by the MCI trusted-source policy.'
+                );
+            }
+
             $batch = $this->ingestion->ingest(
                 $chunk,
                 $source,
