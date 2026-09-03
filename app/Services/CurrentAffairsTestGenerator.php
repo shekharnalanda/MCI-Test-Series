@@ -24,7 +24,7 @@ class CurrentAffairsTestGenerator
             ),
         };
 
-        $questions = Question::query()
+        $query = Question::query()
             ->where('is_current_affairs', true)
             ->where('is_active', true)
             ->where('is_published', true)
@@ -36,7 +36,39 @@ class CurrentAffairsTestGenerator
                 'current_affair_date',
                 '>=',
                 now()->subDays($days)->toDateString()
+            );
+
+        $usedQuestionIds = DB::table('question_test')
+            ->join('tests', 'tests.id', '=', 'question_test.test_id')
+            ->join(
+                'test_series',
+                'test_series.id',
+                '=',
+                'tests.test_series_id'
             )
+            ->where(
+                'test_series.slug',
+                'current-affairs-'.$period
+            )
+            ->pluck('question_test.question_id');
+
+        if ($usedQuestionIds->isNotEmpty()) {
+            $unusedCount = (clone $query)
+                ->whereNotIn(
+                    'questions.id',
+                    $usedQuestionIds
+                )
+                ->count();
+
+            if ($unusedCount >= $questionCount) {
+                $query->whereNotIn(
+                    'questions.id',
+                    $usedQuestionIds
+                );
+            }
+        }
+
+        $questions = $query
             ->orderByDesc('freshness_score')
             ->orderBy('usage_count')
             ->limit($questionCount)
@@ -136,6 +168,9 @@ class CurrentAffairsTestGenerator
                 }
 
                 $test->questions()->sync($sync);
+
+            Question::whereKey($questions->modelKeys())
+                ->increment('usage_count');
 
                 return $test->fresh('questions');
             }
