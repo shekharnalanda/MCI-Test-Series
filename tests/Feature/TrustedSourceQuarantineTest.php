@@ -45,7 +45,15 @@ class TrustedSourceQuarantineTest extends TestCase
             'https://official.example/*' => Http::response(['ok' => true], 200),
         ]);
 
-        app(TrustedSourceHealthService::class)->check($source);
+        $service = app(TrustedSourceHealthService::class);
+
+        $service->check($source);
+        $this->assertTrue($source->fresh()->is_quarantined);
+
+        $service->check($source->fresh());
+        $this->assertTrue($source->fresh()->is_quarantined);
+
+        $service->check($source->fresh());
         $source->refresh();
 
         $this->assertFalse($source->is_quarantined);

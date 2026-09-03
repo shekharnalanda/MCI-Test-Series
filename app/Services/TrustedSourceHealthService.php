@@ -101,7 +101,16 @@ class TrustedSourceHealthService
         }
 
         if ($healthy) {
-            if ($source->is_quarantined) {
+            $recentChecks = $source->healthChecks()
+                ->latest('checked_at')
+                ->limit(3)
+                ->pluck('healthy');
+
+            if (
+                $source->is_quarantined
+                && $recentChecks->count() === 3
+                && $recentChecks->every(fn ($value) => (bool) $value)
+            ) {
                 $source->forceFill([
                     'is_quarantined' => false,
                     'quarantined_at' => null,

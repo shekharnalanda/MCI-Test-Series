@@ -57,6 +57,7 @@ run_test 4 tests/Feature/QuestionAutomationTest.php
 run_test 5 tests/Feature/CurrentAffairsAutomationTest.php
 run_test 6 tests/Feature/LargeQuestionBankTest.php
 run_test 7 tests/Feature/QuestionIngestionTrustedSourceGateTest.php
+run_test 8 tests/Feature/TrustedSourceQuarantineTest.php
 
 echo
 echo "========================================"
