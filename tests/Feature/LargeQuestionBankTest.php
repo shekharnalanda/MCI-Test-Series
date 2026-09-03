@@ -208,7 +208,7 @@ class LargeQuestionBankTest extends TestCase
                 )
                     ->where(
                         'is_published',
-                        true
+                        false
                     )
                     ->exists()
             );
