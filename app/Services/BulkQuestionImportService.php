@@ -87,7 +87,7 @@ class BulkQuestionImportService
                     'started_at' => now(),
                     'completed_at' => now(),
                     'error_message' => $message,
-                    'metadata' => ['file' => basename($path), 'chunk_size' => count($chunk)],
+                    'metadata' => ['file' => $path, 'chunk_size' => count($chunk)],
                 ]);
                 throw new RuntimeException($message);
             }
