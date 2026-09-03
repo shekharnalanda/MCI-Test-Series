@@ -41,7 +41,22 @@ class AutomaticTestGenerator
          * inRandomOrder() is Laravel database-driver aware:
          * MySQL => RAND(), SQLite/PostgreSQL => appropriate equivalent.
          */
-        $questions = $query
+        $usedQuestionIds = DB::table('question_test')
+            ->join('tests', 'tests.id', '=', 'question_test.test_id')
+            ->where('tests.exam_id', $exam->id)
+            ->pluck('question_test.question_id');
+
+        $unusedQuery = clone $query;
+
+        if ($usedQuestionIds->isNotEmpty()) {
+            $unusedQuery->whereNotIn('questions.id', $usedQuestionIds);
+        }
+
+        $selectionQuery = $unusedQuery->count() >= $questionCount
+            ? $unusedQuery
+            : $query;
+
+        $questions = $selectionQuery
             ->orderBy('usage_count')
             ->inRandomOrder()
             ->limit($questionCount)
