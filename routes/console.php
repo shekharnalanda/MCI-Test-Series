@@ -100,3 +100,8 @@ Schedule::command(
     ->dailyAt('03:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
+
+Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
+    ->hourlyAt(35)
+    ->withoutOverlapping(55)
+    ->appendOutputTo(storage_path('logs/question-import-retry.log'));
