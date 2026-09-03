@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 
 class CurrentAffairsService
 {
+    public function __construct(
+        private readonly TrustedSourcePolicy $sourcePolicy
+    ) {}
+
     public function ingest(
         ContentSource $source,
         array $items
@@ -87,6 +91,7 @@ class CurrentAffairsService
              * meet freshness/quality thresholds.
              */
             $autoApprove =
+                $this->sourcePolicy->canAutoPublishCurrentAffairs($source) &&
                 $source->auto_publish_allowed &&
                 $trust >= 90 &&
                 $quality >= 80 &&
