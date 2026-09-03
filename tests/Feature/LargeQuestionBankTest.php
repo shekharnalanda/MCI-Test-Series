@@ -88,6 +88,29 @@ class LargeQuestionBankTest extends TestCase
                 'duplicate_control'
             )
         );
+
+        $job->update([
+            'status' => 'failed',
+            'generated_count' => 8,
+            'accepted_count' => 5,
+            'duplicate_count' => 2,
+            'rejected_count' => 1,
+            'started_at' => now()->subMinute(),
+            'completed_at' => now(),
+            'error_message' => 'Provider timeout'
+        ]);
+
+        $planner->buildJobs(10);
+        $job->refresh();
+
+        $this->assertSame('pending', $job->status);
+        $this->assertSame(0, $job->generated_count);
+        $this->assertSame(0, $job->accepted_count);
+        $this->assertSame(0, $job->duplicate_count);
+        $this->assertSame(0, $job->rejected_count);
+        $this->assertNull($job->started_at);
+        $this->assertNull($job->completed_at);
+        $this->assertNull($job->error_message);
     }
 
     public function test_bulk_json_import_uses_existing_quality_and_duplicate_pipeline(): void

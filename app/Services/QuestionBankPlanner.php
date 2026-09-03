@@ -169,9 +169,23 @@ class QuestionBankPlanner
                                     true
                                 )
                             ) {
-                                $job->update([
-                                    'status' => 'pending'
-                                ]);
+                                $retryState = [
+                    'status' => 'pending'
+                ];
+
+                if (in_array($job->status, ['partial', 'failed'], true)) {
+                    $retryState += [
+                        'generated_count' => 0,
+                        'accepted_count' => 0,
+                        'duplicate_count' => 0,
+                        'rejected_count' => 0,
+                        'started_at' => null,
+                        'completed_at' => null,
+                        'error_message' => null
+                    ];
+                }
+
+                $job->update($retryState);
                             }
 
                             $created++;
