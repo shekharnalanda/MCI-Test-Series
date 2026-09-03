@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\ContentSource;
+use App\Models\QuestionImportBatch;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class BulkQuestionImportService
@@ -71,9 +73,23 @@ class BulkQuestionImportService
             $freshSource = $source->fresh() ?? $source;
 
             if (! $this->sourcePolicy->canGenerateQuestions($freshSource)) {
-                throw new RuntimeException(
-                    'Source is no longer approved by the MCI trusted-source policy.'
-                );
+                $message = 'Source is no longer approved by the MCI trusted-source policy.';
+
+                QuestionImportBatch::create([
+                    'content_source_id' => $source->id,
+                    'batch_code' => 'QB-'.now()->format('YmdHis').'-'.Str::upper(Str::random(6)),
+                    'batch_type' => 'json',
+                    'received_count' => count($chunk),
+                    'accepted_count' => 0,
+                    'duplicate_count' => 0,
+                    'rejected_count' => count($chunk),
+                    'status' => 'failed',
+                    'started_at' => now(),
+                    'completed_at' => now(),
+                    'error_message' => $message,
+                    'metadata' => ['file' => basename($path), 'chunk_size' => count($chunk)],
+                ]);
+                throw new RuntimeException($message);
             }
 
             $batch = $this->ingestion->ingest(

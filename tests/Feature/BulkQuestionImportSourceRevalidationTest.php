@@ -50,15 +50,29 @@ class BulkQuestionImportSourceRevalidationTest extends TestCase
 
         $service = new BulkQuestionImportService($ingestion, $policy);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage(
-            'Source is no longer approved by the MCI trusted-source policy.'
-        );
+        try {
+            $service->importJsonFile(
+                base_path('tests/Fixtures/two-question-chunks.json'),
+                $source,
+                1
+            );
+            $this->fail('Expected the second chunk to be rejected.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(
+                'Source is no longer approved by the MCI trusted-source policy.',
+                $exception->getMessage()
+            );
+        }
 
-        $service->importJsonFile(
-            base_path('tests/Fixtures/two-question-chunks.json'),
-            $source,
-            1
-        );
+        $this->assertDatabaseHas('question_import_batches', [
+            'content_source_id' => $source->id,
+            'batch_type' => 'json',
+            'received_count' => 1,
+            'accepted_count' => 0,
+            'duplicate_count' => 0,
+            'rejected_count' => 1,
+            'status' => 'failed',
+            'error_message' => 'Source is no longer approved by the MCI trusted-source policy.',
+        ]);
     }
 }
