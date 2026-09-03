@@ -24,7 +24,7 @@ class CurrentAffairsAutomationTest extends TestCase
 
         $source = ContentSource::where(
             'slug',
-            'mci-internal-verified'
+            'press-information-bureau'
         )->firstOrFail();
 
         $service = app(CurrentAffairsService::class);
@@ -101,7 +101,7 @@ class CurrentAffairsAutomationTest extends TestCase
 
         $source = ContentSource::where(
             'slug',
-            'approved-open-knowledge'
+            'mci-internal-verified'
         )->firstOrFail();
 
         $source->update([
@@ -151,7 +151,7 @@ class CurrentAffairsAutomationTest extends TestCase
 
         $source = ContentSource::where(
             'slug',
-            'mci-internal-verified'
+            'press-information-bureau'
         )->firstOrFail();
 
         $item = CurrentAffairItem::create([
@@ -358,7 +358,7 @@ class CurrentAffairsAutomationTest extends TestCase
 
         $source = ContentSource::where(
             'slug',
-            'mci-internal-verified'
+            'press-information-bureau'
         )->firstOrFail();
 
         $exam = Exam::where(
