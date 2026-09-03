@@ -19,12 +19,12 @@ class AuditQuestionImportQuality extends Command
     {
         $hours = max(1, (int) $this->option('hours'));
         $batches = DB::table('question_import_batches')
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'failed'])
             ->where('completed_at', '>=', now()->subHours($hours))
             ->get();
 
         if ($batches->isEmpty()) {
-            $this->info('No completed question import batches found in the audit window.');
+            $this->info('No completed or failed question import batches found in the audit window.');
 
             return self::SUCCESS;
         }
@@ -33,16 +33,18 @@ class AuditQuestionImportQuality extends Command
         $accepted = (int) $batches->sum('accepted_count');
         $duplicates = (int) $batches->sum('duplicate_count');
         $rejected = (int) $batches->sum('rejected_count');
+        $failedBatches = $batches->where('status', 'failed')->count();
         $denominator = max(1, $received);
         $duplicateRate = round(($duplicates / $denominator) * 100, 2);
         $rejectionRate = round(($rejected / $denominator) * 100, 2);
 
         $this->table(
-            ['Batches', 'Received', 'Accepted', 'Duplicates', 'Rejected', 'Duplicate %', 'Rejected %'],
-            [[$batches->count(), $received, $accepted, $duplicates, $rejected, $duplicateRate, $rejectionRate]]
+            ['Batches', 'Failed', 'Received', 'Accepted', 'Duplicates', 'Rejected', 'Duplicate %', 'Rejected %'],
+            [[$batches->count(), $failedBatches, $received, $accepted, $duplicates, $rejected, $duplicateRate, $rejectionRate]]
         );
 
-        $unhealthy = $duplicateRate > (float) $this->option('max-duplicate-rate')
+        $unhealthy = $failedBatches > 0
+            || $duplicateRate > (float) $this->option('max-duplicate-rate')
             || $rejectionRate > (float) $this->option('max-rejection-rate');
 
         if ($unhealthy) {

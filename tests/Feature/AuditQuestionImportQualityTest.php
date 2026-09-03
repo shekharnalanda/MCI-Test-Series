@@ -28,10 +28,18 @@ class AuditQuestionImportQualityTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_failed_batch_fails_strict_audit(): void
+    {
+        $this->insertBatch('QB-QUALITY-FAILED', 10, 5, 1, 4, 'failed');
+
+        $this->artisan('question-bank:audit-import-quality --strict --max-rejection-rate=100 --max-duplicate-rate=100')
+            ->expectsOutput('Question import quality thresholds exceeded.')
+            ->assertFailed();
+    }
     public function test_empty_window_is_successful(): void
     {
         $this->artisan('question-bank:audit-import-quality --strict')
-            ->expectsOutput('No completed question import batches found in the audit window.')
+            ->expectsOutput('No completed or failed question import batches found in the audit window.')
             ->assertSuccessful();
     }
 
@@ -40,7 +48,8 @@ class AuditQuestionImportQualityTest extends TestCase
         int $received,
         int $accepted,
         int $duplicates,
-        int $rejected
+        int $rejected,
+        string $status = 'completed'
     ): void {
         DB::table('question_import_batches')->insert([
             'batch_code' => $code,
@@ -49,7 +58,7 @@ class AuditQuestionImportQualityTest extends TestCase
             'accepted_count' => $accepted,
             'duplicate_count' => $duplicates,
             'rejected_count' => $rejected,
-            'status' => 'completed',
+            'status' => $status,
             'started_at' => now()->subMinute(),
             'completed_at' => now(),
             'created_at' => now(),
