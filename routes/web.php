@@ -118,3 +118,15 @@ Route::middleware('auth')->group(function () {
     Route::put('/account/password', [\App\Http\Controllers\PasswordController::class, 'update'])
         ->name('password.update');
 });
+
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/operations', [\App\Http\Controllers\Admin\OperationsController::class, 'index'])->name('operations.index');
+    Route::post('/operations/students', [\App\Http\Controllers\Admin\OperationsController::class, 'storeStudent'])->name('operations.students.store');
+    Route::patch('/operations/students/{user}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleStudent'])->name('operations.students.toggle');
+    Route::post('/operations/students/{profile}/package', [\App\Http\Controllers\Admin\OperationsController::class, 'assignPackage'])->name('operations.students.package');
+    Route::post('/operations/packages', [\App\Http\Controllers\Admin\OperationsController::class, 'storePackage'])->name('operations.packages.store');
+    Route::patch('/operations/packages/{package}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'togglePackage'])->name('operations.packages.toggle');
+    Route::post('/operations/exams', [\App\Http\Controllers\Admin\OperationsController::class, 'storeExam'])->name('operations.exams.store');
+    Route::patch('/operations/exams/{exam}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleExam'])->name('operations.exams.toggle');
+});

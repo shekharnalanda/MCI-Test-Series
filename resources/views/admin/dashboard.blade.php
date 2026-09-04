@@ -22,3 +22,7 @@ Manage Admissions
 Current Affairs Review
 </a>
 @endsection
+
+<a class="btn" href="{{ route('admin.operations.index') }}">
+    Manage Students, Packages & Exams
+</a>
