@@ -55,7 +55,7 @@ class OfficialCurrentAffairsFeedTest extends TestCase
 
         Http::assertSent(fn ($request) =>
             $request->hasHeader('Referer', 'https://official.gov.in/')
-            && str_contains($request->header('User-Agent')[0], 'MCI-Test-Series/1.0')
+            && $request->hasHeader('User-Agent', 'Mozilla/5.0')
         );
     }
 

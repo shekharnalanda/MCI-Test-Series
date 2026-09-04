@@ -37,8 +37,8 @@ class OfficialCurrentAffairsFeedService
     private function client(ContentSource $source): PendingRequest
     {
         return Http::accept('application/rss+xml, application/atom+xml, application/xml, text/xml')
-            ->withUserAgent('Mozilla/5.0 (compatible; MCI-Test-Series/1.0; +https://test.mciedu.com)')
-            ->withHeaders(['Referer' => rtrim((string) $source->base_url, '/').'/'])
+            ->withUserAgent('Mozilla/5.0')
+            ->withHeaders(['Referer' => $this->sourceReferer($source)])
             ->connectTimeout(10)
             ->timeout(25)
             ->retry(2, 500, throw: false)
@@ -113,6 +113,15 @@ class OfficialCurrentAffairsFeedService
     private function clean(string $value): string
     {
         return trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
+    }
+
+    private function sourceReferer(ContentSource $source): string
+    {
+        if ($source->slug === 'press-information-bureau') {
+            return 'https://www.pib.gov.in/ViewRss.aspx?lang=1&reg=1';
+        }
+
+        return rtrim((string) $source->base_url, '/').'/';
     }
 
     private function sameOfficialDomain(string $candidate, string $registered): bool
