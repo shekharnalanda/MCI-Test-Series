@@ -130,3 +130,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/operations/exams', [\App\Http\Controllers\Admin\OperationsController::class, 'storeExam'])->name('operations.exams.store');
     Route::patch('/operations/exams/{exam}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleExam'])->name('operations.exams.toggle');
 });
+
+
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/content', [\App\Http\Controllers\Admin\ContentController::class, 'index'])->name('content.index');
+    Route::post('/content/subjects', [\App\Http\Controllers\Admin\ContentController::class, 'storeSubject'])->name('content.subjects.store');
+    Route::post('/content/topics', [\App\Http\Controllers\Admin\ContentController::class, 'storeTopic'])->name('content.topics.store');
+    Route::post('/content/questions', [\App\Http\Controllers\Admin\ContentController::class, 'storeQuestion'])->name('content.questions.store');
+    Route::post('/content/generate', [\App\Http\Controllers\Admin\ContentController::class, 'generate'])->name('content.generate');
+    Route::patch('/content/tests/{test}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleTest'])->name('content.tests.toggle');
+    Route::patch('/content/series/{series}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleSeries'])->name('content.series.toggle');
+});

@@ -26,3 +26,7 @@ Current Affairs Review
 <a class="btn" href="{{ route('admin.operations.index') }}">
     Manage Students, Packages & Exams
 </a>
+
+<a class="btn" href="{{ route('admin.content.index') }}">
+    Manage Content & Generate Tests
+</a>
