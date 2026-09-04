@@ -29,6 +29,13 @@ Schedule::command(
     ->withoutOverlapping(45);
 
 Schedule::command(
+    'mci:current-affairs-generate-verified --limit=50'
+)
+    ->hourlyAt(25)
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(45);
+
+Schedule::command(
     'mci:current-affairs-tests daily --questions=10'
 )
     ->dailyAt('06:00')
