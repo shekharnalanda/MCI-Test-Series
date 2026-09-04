@@ -1,78 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'MCI Test Series')</title>
-    <link rel="icon" type="image/png" href="{{ asset("images/mci-test-series-logo.png") }}">
-    <link rel="apple-touch-icon" href="{{ asset("images/mci-test-series-logo.png") }}">
-    <style>
-        *{box-sizing:border-box}
-        body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
-        header{background:#102a56;color:#fff;padding:15px 5%}
-        nav{display:flex;align-items:center;justify-content:space-between;gap:20px}
-        nav a{color:#fff;text-decoration:none;margin-left:15px}
-        .brand{font-size:21px;font-weight:700;display:flex;align-items:center;gap:10px}.brand-logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
-        .container{width:min(1150px,92%);margin:30px auto}
-        .card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,.07);margin-bottom:20px}
-        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
-        label{display:block;font-weight:600;margin:12px 0 6px}
-        input,select,textarea{width:100%;padding:11px;border:1px solid #ccd3df;border-radius:7px}
-        button,.btn{display:inline-block;background:#164a96;color:#fff;border:0;border-radius:7px;padding:11px 18px;text-decoration:none;cursor:pointer}
-        .btn-danger{background:#a82828}
-        .success{background:#e8f7ec;padding:12px;border-radius:7px;margin-bottom:15px}
-        .error{background:#fdeaea;padding:12px;border-radius:7px;margin-bottom:15px}
-        table{width:100%;border-collapse:collapse}
-        th,td{padding:10px;border-bottom:1px solid #e5e9f0;text-align:left}
-        .hero{padding:55px 0;text-align:center}
-        .hero h1{font-size:40px;margin-bottom:12px}
-        .badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#e9eff9}
-        @media(max-width:600px){.hero h1{font-size:29px}}
-    </style>
-</head>
-<body>
-
-<header>
-<nav>
-    <div class="brand"><img class="brand-logo" src="{{ asset("images/mci-test-series-logo.png") }}?v=20260904" alt="MCI Test Series logo"><span>MCI TEST SERIES</span></div>
-    <div>
-        <a href="{{ route('home') }}">Home</a>
-        @guest
-            <a href="{{ route('admission.create') }}">Admission</a>
-            <a href="{{ route('login') }}">Login</a>
-        @endguest
-                @auth
-                    @if(auth()->user()->role === 'admin')
-                        <a href="{{ route('admin.dashboard') }}">Dashboard</a>
-                    @else
-                        <a href="{{ route('student.dashboard') }}">Dashboard</a>
-                    @endif
-                    <a href="{{ route('password.edit') }}">Change Password</a>
-                    <form method="POST" action="{{ route('logout') }}" style="display:inline">
-                        @csrf
-                        <button type="submit" style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0">Logout</button>
-                    </form>
-                @endauth
-    </div>
-</nav>
-</header>
-
-<div class="container">
-
-@if(session('success'))
-    <div class="success">{{ session('success') }}</div>
-@endif
-
-@if($errors->any())
-    <div class="error">
-        @foreach($errors->all() as $error)
-            <div>{{ $error }}</div>
-        @endforeach
-    </div>
-@endif
-
-@yield('content')
-
-</div>
-</body>
-</html>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="MCI Test Series - bilingual online mock tests and practice sets for competitive examinations.">
+<title>@yield('title','MCI Test Series')</title>
+<style>
+:root{--navy:#082654;--blue:#155ba7;--gold:#f4b63e;--ink:#14213d;--muted:#5d6b82;--line:#dce6f2}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#f6f9fd;color:var(--ink);line-height:1.55}a{color:inherit}.site-header{position:sticky;top:0;z-index:40;background:rgba(8,38,84,.98);color:#fff;box-shadow:0 4px 20px #071b3f2e}.top-strip{background:#061d42;font-size:13px}.top-inner,.nav-inner{width:min(1200px,92%);margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px}.top-inner{min-height:34px}.top-contact{display:flex;gap:18px;flex-wrap:wrap}.top-strip a{text-decoration:none;color:#e5efff}.nav-inner{min-height:76px}.brand{display:flex;align-items:center;gap:12px;text-decoration:none}.brand img{width:54px;height:54px;object-fit:contain;border-radius:50%;background:#fff}.brand-copy{display:flex;flex-direction:column;line-height:1.1}.brand-name{font-size:20px;font-weight:850}.brand-tag{font-size:11px;color:#bdd3f4;margin-top:6px;letter-spacing:.6px;text-transform:uppercase}.main-nav{display:flex;align-items:center;justify-content:flex-end;gap:5px;flex-wrap:wrap}.main-nav>a,.nav-form button{color:#fff;text-decoration:none;padding:9px 11px;border-radius:7px;font-weight:650;font-size:14px;background:none;border:0;cursor:pointer;font-family:inherit}.main-nav>a:hover,.nav-form button:hover{background:#ffffff1f}.main-nav .nav-cta{background:var(--gold);color:#17233a}.nav-form{display:inline;margin:0}.page-shell{min-height:60vh}.container{width:min(1160px,92%);margin:32px auto}.card{background:#fff;border:1px solid #e5edf6;border-radius:14px;padding:24px;box-shadow:0 8px 26px #0f2a5212;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}label{display:block;font-weight:700;margin:12px 0 6px}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd7e6;border-radius:8px;font:inherit}button,.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--blue);color:#fff;border:0;border-radius:8px;padding:11px 18px;text-decoration:none;cursor:pointer;font-weight:750;font-family:inherit}.btn:hover{filter:brightness(.94)}.btn-danger{background:#a82828}.success{background:#e8f7ec;padding:12px;border-radius:7px;margin-bottom:15px}.error{background:#fdeaea;padding:12px;border-radius:7px;margin-bottom:15px}table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #e5e9f0;text-align:left}.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#e9eff9}.site-footer{background:#061d42;color:#d7e4f7;margin-top:64px}.footer-grid{width:min(1200px,92%);margin:auto;padding:48px 0 32px;display:grid;grid-template-columns:1.35fr 1fr 1fr 1.25fr;gap:34px}.footer-brand{display:flex;align-items:center;gap:12px;color:#fff;font-weight:850;font-size:18px}.footer-brand img{width:58px;height:58px;object-fit:contain;border-radius:50%;background:#fff}.site-footer h3{color:#fff;font-size:16px;margin:0 0 15px}.site-footer p{margin:8px 0}.site-footer a{color:#d7e4f7;text-decoration:none}.footer-links{display:grid;gap:9px}.footer-bottom{border-top:1px solid #ffffff1f}.footer-bottom-inner{width:min(1200px,92%);margin:auto;padding:18px 0;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;font-size:13px;color:#aebfda}@media(max-width:900px){.top-strip{display:none}.site-header{position:static}.footer-grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.nav-inner{display:block;padding:10px 0}.brand{margin-bottom:10px}.main-nav{justify-content:flex-start}.main-nav>a,.nav-form button{font-size:13px;padding:7px 8px}.brand img{width:46px;height:46px}.brand-name{font-size:17px}.brand-tag{display:none}.footer-grid{grid-template-columns:1fr;padding-top:36px}.site-footer{margin-top:44px}}@yield('styles')
+</style>
+</head><body>
+<header class="site-header"><div class="top-strip"><div class="top-inner"><div class="top-contact"><a href="tel:+917004773247">☎ 7004773247</a><a href="tel:+919334779133">☎ 9334779133</a><a href="mailto:mcieducationalgroup@gmail.com">✉ mcieducationalgroup@gmail.com</a></div><span>Hindi + English • Exam-style Practice</span></div></div>
+<nav class="nav-inner" aria-label="Main navigation"><a class="brand" href="{{ route('home') }}"><img src="{{ asset('images/mci-test-series-logo.png') }}" alt="MCI Test Series logo"><span class="brand-copy"><span class="brand-name">MCI TEST SERIES</span><span class="brand-tag">Prepare • Practice • Perform</span></span></a><div class="main-nav"><a href="{{ route('home') }}">Home</a><a href="{{ route('home') }}#exams">Exams</a><a href="{{ route('home') }}#demo-tests">Free Demo</a><a href="{{ route('home') }}#features">Features</a>@guest<a href="{{ route('login') }}">Login</a><a class="nav-cta" href="{{ route('admission.create') }}">Admission</a>@endguest @auth<a href="{{ auth()->user()->role === 'admin' ? route('admin.dashboard') : route('student.dashboard') }}">Dashboard</a><a href="{{ route('password.edit') }}">Password</a><form class="nav-form" method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Logout</button></form>@endauth</div></nav></header>
+<main class="page-shell">@hasSection('fullwidth')@yield('fullwidth')@else<div class="container">@if(session('success'))<div class="success">{{ session('success') }}</div>@endif @if($errors->any())<div class="error">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif @yield('content')</div>@endif</main>
+<footer class="site-footer" id="contact"><div class="footer-grid"><div><div class="footer-brand"><img src="{{ asset('images/mci-test-series-logo.png') }}" alt="MCI logo"><span>MCI TEST SERIES</span></div><p>A professional bilingual online practice and test platform for major competitive examinations.</p><p>Run under Chandrashekhar &amp; Narayan Educational Trust.</p></div><div><h3>Quick Links</h3><div class="footer-links"><a href="{{ route('home') }}#exams">Explore Exams</a><a href="{{ route('home') }}#demo-tests">Free Demo Tests</a><a href="{{ route('admission.create') }}">Online Admission</a><a href="{{ route('login') }}">Student Login</a></div></div><div><h3>Popular Exams</h3><div class="footer-links"><span>SSC &amp; Railway</span><span>Banking</span><span>UPSC &amp; BPSC</span><span>Bihar Police</span><span>Teaching Exams</span></div></div><div><h3>Contact Us</h3><p>MCI Campus, Quamruddin Ganj,<br>Bihar Sharif, Nalanda – 803101</p><p><a href="tel:+917004773247">7004773247</a> • <a href="tel:+919334779133">9334779133</a></p><p><a href="mailto:mcieducationalgroup@gmail.com">mcieducationalgroup@gmail.com</a></p></div></div><div class="footer-bottom"><div class="footer-bottom-inner"><span>© {{ date('Y') }} MCI Test Series. All rights reserved.</span><span>Secure • Bilingual • Verified Question Bank</span></div></div></footer>
+</body></html>
