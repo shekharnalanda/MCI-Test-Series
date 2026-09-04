@@ -92,7 +92,9 @@ class QuestionIngestionService
                 $this->sourcePolicy->canAutoPublishQuestions($source) &&
                         $source->auto_publish_allowed &&
                         $trust >= 90 &&
-                        $quality >= 90;
+                filled($item['source_url'] ?? null) &&
+                    filled($item['source_reference'] ?? $source->slug ?? null) &&
+                    filled($item['source_published_at'] ?? $item['current_affair_date'] ?? null);
 
                     $question = Question::create([
                         'subject_id' => $item['subject_id'] ?? null,
@@ -100,8 +102,8 @@ class QuestionIngestionService
 
                         'content_source_id' => $source?->id,
                     'source_url' => $item['source_url'] ?? null,
-                    'source_reference' => $item['source_reference'] ?? null,
-                    'source_published_at' => $item['source_published_at'] ?? null,
+                'source_reference' => $item['source_reference'] ?? $source->slug ?? null,
+                'source_published_at' => $item['source_published_at'] ?? $item['current_affair_date'] ?? null,
                     'imported_at' => now(),
                         'question_import_batch_id' => $batch->id,
 

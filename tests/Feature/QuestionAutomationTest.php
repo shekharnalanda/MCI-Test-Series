@@ -49,6 +49,7 @@ class QuestionAutomationTest extends TestCase
             'exam_ids' => [$exam->id],
             'difficulty' => 'easy',
             'language' => 'bilingual',
+            'source_url' => 'https://example.test/oceans', 'source_reference' => 'trusted-ocean-reference', 'source_published_at' => now()->toDateString(),
 
             'options' => [
                 [
