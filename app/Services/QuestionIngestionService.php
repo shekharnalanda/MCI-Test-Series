@@ -92,9 +92,7 @@ class QuestionIngestionService
                 $this->sourcePolicy->canAutoPublishQuestions($source) &&
                         $source->auto_publish_allowed &&
                         $trust >= 90 &&
-                filled($item['source_url'] ?? null) &&
-                    filled($item['source_reference'] ?? null) &&
-                    filled($item['source_published_at'] ?? null);
+                    $this->hasValidProvenance($item);
 
                     $question = Question::create([
                         'subject_id' => $item['subject_id'] ?? null,
@@ -234,6 +232,7 @@ class QuestionIngestionService
         return min(100, $score);
     }
 
+    private function hasValidProvenance(array $item): bool { $url = trim((string) ($item['source_url'] ?? '')); $reference = trim((string) ($item['source_reference'] ?? '')); $publishedAt = $item['source_published_at'] ?? null; $timestamp = is_scalar($publishedAt) ? strtotime((string) $publishedAt) : false; return $url !== '' && filter_var($url, FILTER_VALIDATE_URL) !== false && in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true) && $reference !== '' && $timestamp !== false && $timestamp <= now()->timestamp; }
     private function freshnessScore(array $item): int
     {
         if (empty($item['is_current_affairs'])) {

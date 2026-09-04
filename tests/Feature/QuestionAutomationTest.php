@@ -115,6 +115,7 @@ class QuestionAutomationTest extends TestCase
         $this->assertEquals(0, $second->accepted_count);
         $this->assertEquals(1, $second->duplicate_count);
         foreach (['source_url', 'source_reference', 'source_published_at'] as $missingField) { $unverified = $item; $unverified['question_text'] = 'Which source field is missing: '.$missingField.'?'; unset($unverified[$missingField]); $batch = $service->ingest([$unverified], $source, 'generated'); $pendingQuestion = Question::where('question_text', $unverified['question_text'])->firstOrFail(); $this->assertSame(1, $batch->accepted_count); $this->assertFalse($pendingQuestion->is_published, $missingField.' should block auto publish'); $this->assertSame('pending', $pendingQuestion->verification_status); }
+        foreach ([['source_url' => 'javascript:alert(1)'], ['source_published_at' => now()->addDay()->toDateString()]] as $index => $invalidFields) { $unverified = array_merge($item, $invalidFields); $unverified['question_text'] = 'Which provenance value is invalid: '.$index.'?'; $batch = $service->ingest([$unverified], $source, 'generated'); $pendingQuestion = Question::where('question_text', $unverified['question_text'])->firstOrFail(); $this->assertSame(1, $batch->accepted_count); $this->assertFalse($pendingQuestion->is_published); $this->assertSame('pending', $pendingQuestion->verification_status); }
     }
 
     public function test_automatic_generator_builds_test_from_verified_questions(): void
