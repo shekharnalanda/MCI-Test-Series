@@ -118,7 +118,7 @@ class OfficialCurrentAffairsFeedService
     private function sourceReferer(ContentSource $source): string
     {
         if ($source->slug === 'press-information-bureau') {
-            return 'https://www.pib.gov.in/ViewRss.aspx?lang=1&reg=1';
+            return 'https://www.pib.gov.in/ViewRss.aspx?lang=1&reg=3';
         }
 
         return rtrim((string) $source->base_url, '/').'/';

@@ -31,7 +31,7 @@ class ContentSourceSeeder extends Seeder
                 'slug' => 'press-information-bureau',
                 'source_type' => 'government',
                 'base_url' => 'https://pib.gov.in',
-                'feed_url' => 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1',
+                'feed_url' => 'https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3',
                 'trust_score' => 100,
                 'allow_current_affairs' => true,
                 'allow_question_generation' => true,
