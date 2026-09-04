@@ -39,6 +39,18 @@
             <a href="{{ route('admission.create') }}">Admission</a>
             <a href="{{ route('login') }}">Login</a>
         @endguest
+                @auth
+                    @if(auth()->user()->role === 'admin')
+                        <a href="{{ route('admin.dashboard') }}">Dashboard</a>
+                    @else
+                        <a href="{{ route('student.dashboard') }}">Dashboard</a>
+                    @endif
+                    <a href="{{ route('password.edit') }}">Change Password</a>
+                    <form method="POST" action="{{ route('logout') }}" style="display:inline">
+                        @csrf
+                        <button type="submit" style="background:none;border:0;color:inherit;font:inherit;cursor:pointer;padding:0">Logout</button>
+                    </form>
+                @endauth
     </div>
 </nav>
 </header>

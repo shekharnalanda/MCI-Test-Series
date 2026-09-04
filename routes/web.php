@@ -110,3 +110,11 @@ Route::middleware(['auth', 'role:admin'])
             [AdminAdmissionController::class, 'reject']
         )->name('admissions.reject');
     });
+
+
+Route::middleware('auth')->group(function () {
+    Route::get('/account/password', [\App\Http\Controllers\PasswordController::class, 'edit'])
+        ->name('password.edit');
+    Route::put('/account/password', [\App\Http\Controllers\PasswordController::class, 'update'])
+        ->name('password.update');
+});
