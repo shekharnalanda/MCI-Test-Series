@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - /bin/bash /home4/mcied45x/repositories/MCI-Test-Series/scripts/deploy-cpanel.sh
