@@ -73,6 +73,7 @@ class CurrentAffairsQuestionService
                     ?->toDateString(),
 
             'source_url' => $item->source_url,
+            'source_reference' => $item->source?->slug, 'source_published_at' => optional($item->published_at)?->toDateString(),
 
             'generation_method' =>
                 $questionData['generation_method']
