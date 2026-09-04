@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
 <title>{{ $attempt->test->title }} | MCI Test Series</title>
+<link rel="icon" type="image/png" href="{{ asset("images/mci-test-series-logo.png") }}">
 
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -271,9 +272,7 @@ border-top:1px solid #d7deea
 
 <div class="brand-wrap">
 
-<div class="logo-box">
-MCI
-</div>
+<div class="logo-box"><img src="{{ asset("images/mci-test-series-logo.png") }}?v=20260904" alt="MCI Test Series logo" style="width:100%;height:100%;object-fit:contain"></div>
 
 <div class="brand">
 MCI TEST SERIES

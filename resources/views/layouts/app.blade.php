@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'MCI Test Series')</title>
+    <link rel="icon" type="image/png" href="{{ asset("images/mci-test-series-logo.png") }}">
+    <link rel="apple-touch-icon" href="{{ asset("images/mci-test-series-logo.png") }}">
     <style>
         *{box-sizing:border-box}
         body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
         header{background:#102a56;color:#fff;padding:15px 5%}
         nav{display:flex;align-items:center;justify-content:space-between;gap:20px}
         nav a{color:#fff;text-decoration:none;margin-left:15px}
-        .brand{font-size:21px;font-weight:700}
+        .brand{font-size:21px;font-weight:700;display:flex;align-items:center;gap:10px}.brand-logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
         .container{width:min(1150px,92%);margin:30px auto}
         .card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 5px 20px rgba(0,0,0,.07);margin-bottom:20px}
         .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px}
@@ -32,7 +34,7 @@
 
 <header>
 <nav>
-    <div class="brand">MCI TEST SERIES</div>
+    <div class="brand"><img class="brand-logo" src="{{ asset("images/mci-test-series-logo.png") }}?v=20260904" alt="MCI Test Series logo"><span>MCI TEST SERIES</span></div>
     <div>
         <a href="{{ route('home') }}">Home</a>
         @guest
