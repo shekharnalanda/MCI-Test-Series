@@ -52,6 +52,11 @@ class OfficialCurrentAffairsFeedTest extends TestCase
             'source_url' => 'https://official.gov.in/release/1',
             'status' => 'approved',
         ]);
+
+        Http::assertSent(fn ($request) =>
+            $request->hasHeader('Referer', 'https://official.gov.in/')
+            && str_contains($request->header('User-Agent')[0], 'MCI-Test-Series/1.0')
+        );
     }
 
     public function test_dry_run_does_not_write_items(): void

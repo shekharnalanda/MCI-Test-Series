@@ -18,7 +18,7 @@ class OfficialCurrentAffairsFeedService
     {
         $this->assertFetchable($source);
 
-        $response = $this->client()->get($source->feed_url);
+        $response = $this->client($source)->get($source->feed_url);
         $source->update(['last_checked_at' => now()]);
 
         if (! $response->successful()) {
@@ -34,10 +34,11 @@ class OfficialCurrentAffairsFeedService
         return ['fetched' => count($items)] + $this->currentAffairs->ingest($source, $items);
     }
 
-    private function client(): PendingRequest
+    private function client(ContentSource $source): PendingRequest
     {
         return Http::accept('application/rss+xml, application/atom+xml, application/xml, text/xml')
-            ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
+            ->withUserAgent('Mozilla/5.0 (compatible; MCI-Test-Series/1.0; +https://test.mciedu.com)')
+            ->withHeaders(['Referer' => rtrim((string) $source->base_url, '/').'/'])
             ->connectTimeout(10)
             ->timeout(25)
             ->retry(2, 500, throw: false)
