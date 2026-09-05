@@ -101,4 +101,47 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
         $this->assertSame(1, Question::where('is_current_affairs', true)->count());
         $this->assertCount(4, Question::firstOrFail()->options);
     }
+
+    public function test_it_generates_bilingual_questions_for_known_rbi_release_formats(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $source = ContentSource::where('slug', 'reserve-bank-of-india')->firstOrFail();
+        $titles = [
+            'Inclusion of “Coastal Local Area Bank Limited” in the Second Schedule to the Reserve Bank of India Act, 1934',
+            'Result of the Second 3-day Variable Rate Reverse Repo (VRRR) auction held on September 04, 2026',
+            'RBI to conduct Second 3-day Variable Rate Reverse Repo (VRRR) auction under LAF on September 04, 2026',
+            'Premature redemption under Sovereign Gold Bond (SGB) Scheme - Redemption Price for premature redemption of SGB 2021-22 Series VI due on September 07, 2026',
+            'Auction of 91-Day, 182-Day and 364-Day Treasury Bills',
+            'RBI to conduct 30-day Variable Rate Reverse Repo (VRRR) auction under LAF',
+        ];
+
+        foreach ($titles as $index => $title) {
+            CurrentAffairItem::create([
+                'content_source_id' => $source->id,
+                'title' => $title,
+                'summary' => $title,
+                'source_url' => "https://rbi.org.in/known-release/{$index}",
+                'published_at' => now(),
+                'fetched_at' => now(),
+                'content_hash' => hash('sha256', "known|{$title}"),
+                'trust_score' => 100,
+                'freshness_score' => 100,
+                'quality_score' => 100,
+                'status' => 'approved',
+                'auto_approved' => true,
+            ]);
+        }
+
+        $this->artisan('mci:current-affairs-generate-verified')->assertSuccessful();
+
+        $this->assertSame(count($titles), Question::where('is_current_affairs', true)->count());
+        Question::where('is_current_affairs', true)->each(function (Question $question): void {
+            $this->assertSame('bilingual', $question->language);
+            $this->assertNotEmpty($question->question_text_hi);
+            $this->assertNotEmpty($question->explanation_hi);
+            $this->assertSame('verified', $question->verification_status);
+            $this->assertCount(4, $question->options);
+            $this->assertSame(1, $question->options->where('is_correct', true)->count());
+        });
+    }
 }

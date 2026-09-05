@@ -13,17 +13,14 @@ class VerifiedCurrentAffairsQuestionGenerator
 
     public function generate(int $limit = 20, bool $dryRun = false): array
     {
-        $eligibleFacts = CurrentAffairItem::query()
+        $eligibleItems = CurrentAffairItem::query()
             ->with('source')
             ->where('status', 'approved')
             ->where('question_generated', false)
             ->whereHas('source', fn ($query) => $query->where('slug', 'reserve-bank-of-india'))
             ->orderBy('published_at')
             ->orderBy('id')
-            ->get()
-            ->map(fn (CurrentAffairItem $item) => $this->penaltyFact($item))
-            ->filter()
-            ->values();
+            ->get();
 
         $amounts = CurrentAffairItem::query()
             ->with('source')
@@ -41,10 +38,10 @@ class VerifiedCurrentAffairsQuestionGenerator
         $skipped = 0;
         $failed = 0;
 
-        foreach ($eligibleFacts->take(max(1, min($limit, 100))) as $fact) {
-            $distractors = $amounts->reject(fn ($amount) => $amount === $fact['amount'])->take(3);
+        foreach ($eligibleItems->take(max(1, min($limit, 100))) as $item) {
+            $payload = $this->questionPayload($item, $amounts);
 
-            if ($distractors->count() !== 3) {
+            if ($payload === null) {
                 $skipped++;
                 continue;
             }
@@ -54,27 +51,8 @@ class VerifiedCurrentAffairsQuestionGenerator
                 continue;
             }
 
-            $options = $distractors->push($fact['amount'])
-                ->sortBy(fn ($amount) => hash('sha256', $fact['item']->id.'|'.$amount))
-                ->values()
-                ->map(fn ($amount) => [
-                    'option_text' => $amount,
-                    'option_text_hi' => $amount,
-                    'is_correct' => $amount === $fact['amount'],
-                ])
-                ->all();
-
             try {
-                $this->questions->createQuestion($fact['item'], [
-                    'question_text' => "According to the RBI order dated {$fact['date']}, what monetary penalty was imposed on {$fact['entity']}?",
-                    'question_text_hi' => "RBI के {$fact['date_hi']} के आदेश के अनुसार {$fact['entity']} पर कितनी मौद्रिक पेनल्टी लगाई गई?",
-                    'explanation' => "RBI imposed a monetary penalty of {$fact['amount']} on {$fact['entity']} by its order dated {$fact['date']}.",
-                    'explanation_hi' => "RBI ने {$fact['date_hi']} के आदेश द्वारा {$fact['entity']} पर {$fact['amount']} की मौद्रिक पेनल्टी लगाई।",
-                    'difficulty' => 'medium',
-                    'language' => 'bilingual',
-                    'generation_method' => 'automated',
-                    'options' => $options,
-                ]);
+                $this->questions->createQuestion($item, $payload);
                 $generated++;
             } catch (\Throwable) {
                 $failed++;
@@ -82,6 +60,124 @@ class VerifiedCurrentAffairsQuestionGenerator
         }
 
         return compact('generated', 'skipped', 'failed');
+    }
+
+    private function questionPayload(CurrentAffairItem $item, $amounts): ?array
+    {
+        if ($fact = $this->penaltyFact($item)) {
+            $distractors = $amounts->reject(fn ($amount) => $amount === $fact['amount'])->take(3);
+
+            if ($distractors->count() !== 3) {
+                return null;
+            }
+
+            return $this->payload(
+                $item,
+                "According to the RBI order dated {$fact['date']}, what monetary penalty was imposed on {$fact['entity']}?",
+                "RBI के {$fact['date_hi']} के आदेश के अनुसार {$fact['entity']} पर कितनी मौद्रिक पेनल्टी लगाई गई?",
+                "RBI imposed a monetary penalty of {$fact['amount']} on {$fact['entity']} by its order dated {$fact['date']}.",
+                "RBI ने {$fact['date_hi']} के आदेश द्वारा {$fact['entity']} पर {$fact['amount']} की मौद्रिक पेनल्टी लगाई।",
+                $distractors->push($fact['amount'])->map(fn ($amount) => [$amount, $amount, $amount === $fact['amount']])->all(),
+            );
+        }
+
+        return $this->knownReleasePayload($item);
+    }
+
+    private function knownReleasePayload(CurrentAffairItem $item): ?array
+    {
+        $title = trim($item->title);
+
+        if (preg_match('/^Inclusion of [“"](.+?)[”"] in the (First|Second|Third|Fourth) Schedule to the Reserve Bank of India Act, 1934$/u', $title, $matches)) {
+            $schedule = $matches[2];
+            $labels = ['First' => 'प्रथम', 'Second' => 'द्वितीय', 'Third' => 'तृतीय', 'Fourth' => 'चतुर्थ'];
+
+            return $this->payload(
+                $item,
+                "In which Schedule to the Reserve Bank of India Act, 1934 was {$matches[1]} included?",
+                "{$matches[1]} को भारतीय रिज़र्व बैंक अधिनियम, 1934 की किस अनुसूची में शामिल किया गया?",
+                "RBI announced the inclusion of {$matches[1]} in the {$schedule} Schedule to the Reserve Bank of India Act, 1934.",
+                "RBI ने {$matches[1]} को भारतीय रिज़र्व बैंक अधिनियम, 1934 की {$labels[$schedule]} अनुसूची में शामिल करने की घोषणा की।",
+                collect($labels)->map(fn ($hi, $en) => ["{$en} Schedule", "{$hi} अनुसूची", $en === $schedule])->values()->all(),
+            );
+        }
+
+        if (preg_match('/^(?:Result of the (?:Second )?|RBI to conduct (?:Second )?)(\d+)-day Variable Rate Reverse Repo \(VRRR\) auction(?: held)?(?: under LAF)?(?: on .+)?$/i', $title, $matches)) {
+            $tenor = (int) $matches[1];
+
+            if (! in_array($tenor, [3, 7, 14, 30], true)) {
+                return null;
+            }
+
+            return $this->payload(
+                $item,
+                "What was the tenor of the RBI Variable Rate Reverse Repo (VRRR) auction referred to in this release?",
+                'इस RBI विज्ञप्ति में उल्लिखित Variable Rate Reverse Repo (VRRR) नीलामी की अवधि कितनी थी?',
+                "The RBI release refers to a {$tenor}-day Variable Rate Reverse Repo (VRRR) auction.",
+                "RBI की विज्ञप्ति {$tenor}-दिवसीय Variable Rate Reverse Repo (VRRR) नीलामी से संबंधित है।",
+                collect([3, 7, 14, 30])->map(fn ($days) => ["{$days} days", "{$days} दिन", $days === $tenor])->all(),
+            );
+        }
+
+        if (preg_match('/^Premature redemption under Sovereign Gold Bond \(SGB\) Scheme - Redemption Price for premature redemption of (SGB .+?) due on (.+)$/i', $title, $matches)) {
+            $series = $matches[1];
+            $options = ['SGB 2021-22 Series IV', 'SGB 2021-22 Series V', 'SGB 2021-22 Series VI', 'SGB 2021-22 Series VII'];
+
+            if (! in_array($series, $options, true)) {
+                return null;
+            }
+
+            return $this->payload(
+                $item,
+                "Which Sovereign Gold Bond series was due for premature redemption on {$matches[2]}?",
+                "{$matches[2]} को समयपूर्व मोचन के लिए कौन-सी Sovereign Gold Bond श्रृंखला देय थी?",
+                "The RBI release specifies {$series} for premature redemption on {$matches[2]}.",
+                "RBI की विज्ञप्ति में {$matches[2]} को समयपूर्व मोचन के लिए {$series} निर्दिष्ट है।",
+                collect($options)->map(fn ($option) => [$option, $option, $option === $series])->all(),
+            );
+        }
+
+        if ($title === 'Auction of 91-Day, 182-Day and 364-Day Treasury Bills') {
+            $correct = '91-day, 182-day and 364-day';
+
+            return $this->payload(
+                $item,
+                'Which Treasury Bill maturities were included in the RBI auction announcement?',
+                'RBI की नीलामी घोषणा में Treasury Bills की कौन-सी परिपक्वता अवधियाँ शामिल थीं?',
+                'The announcement covered 91-day, 182-day and 364-day Treasury Bills.',
+                'घोषणा में 91-दिवसीय, 182-दिवसीय और 364-दिवसीय Treasury Bills शामिल थे।',
+                [
+                    [$correct, '91-दिवसीय, 182-दिवसीय और 364-दिवसीय', true],
+                    ['30-day, 60-day and 90-day', '30-दिवसीय, 60-दिवसीय और 90-दिवसीय', false],
+                    ['100-day, 200-day and 300-day', '100-दिवसीय, 200-दिवसीय और 300-दिवसीय', false],
+                    ['180-day, 270-day and 365-day', '180-दिवसीय, 270-दिवसीय और 365-दिवसीय', false],
+                ],
+            );
+        }
+
+        return null;
+    }
+
+    private function payload(CurrentAffairItem $item, string $question, string $questionHi, string $explanation, string $explanationHi, array $options): array
+    {
+        return [
+            'question_text' => $question,
+            'question_text_hi' => $questionHi,
+            'explanation' => $explanation,
+            'explanation_hi' => $explanationHi,
+            'difficulty' => 'medium',
+            'language' => 'bilingual',
+            'generation_method' => 'automated',
+            'options' => collect($options)
+                ->sortBy(fn ($option) => hash('sha256', $item->id.'|'.$option[0]))
+                ->values()
+                ->map(fn ($option) => [
+                    'option_text' => $option[0],
+                    'option_text_hi' => $option[1],
+                    'is_correct' => $option[2],
+                ])
+                ->all(),
+        ];
     }
 
     private function penaltyFact(CurrentAffairItem $item): ?array
