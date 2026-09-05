@@ -102,7 +102,7 @@ class VerifiedCurrentAffairsQuestionGenerator
             );
         }
 
-        if (preg_match('/^(?:Result of the (?:Second )?|RBI to conduct (?:Second )?)(\d+)-day Variable Rate Reverse Repo \(VRRR\) auction(?: held)?(?: under LAF)?(?: on .+)?$/i', $title, $matches)) {
+        if (preg_match('/^Result of the (?:Second )?(\d+)-day Variable Rate Reverse Repo \(VRRR\) auction held on (.+)$/i', $title, $matches)) {
             $tenor = (int) $matches[1];
 
             if (! in_array($tenor, [3, 7, 14, 30], true)) {
@@ -111,10 +111,31 @@ class VerifiedCurrentAffairsQuestionGenerator
 
             return $this->payload(
                 $item,
-                "What was the tenor of the RBI Variable Rate Reverse Repo (VRRR) auction referred to in this release?",
-                'इस RBI विज्ञप्ति में उल्लिखित Variable Rate Reverse Repo (VRRR) नीलामी की अवधि कितनी थी?',
-                "The RBI release refers to a {$tenor}-day Variable Rate Reverse Repo (VRRR) auction.",
-                "RBI की विज्ञप्ति {$tenor}-दिवसीय Variable Rate Reverse Repo (VRRR) नीलामी से संबंधित है।",
+                "What was the tenor of the RBI Variable Rate Reverse Repo (VRRR) auction held on {$matches[2]}?",
+                "{$matches[2]} को आयोजित RBI Variable Rate Reverse Repo (VRRR) नीलामी की अवधि कितनी थी?",
+                "The RBI result refers to a {$tenor}-day Variable Rate Reverse Repo (VRRR) auction held on {$matches[2]}.",
+                "RBI का परिणाम {$matches[2]} को आयोजित {$tenor}-दिवसीय Variable Rate Reverse Repo (VRRR) नीलामी से संबंधित है।",
+                collect([3, 7, 14, 30])->map(fn ($days) => ["{$days} days", "{$days} दिन", $days === $tenor])->all(),
+            );
+        }
+
+        if (preg_match('/^RBI to conduct (?:Second )?(\d+)-day Variable Rate Reverse Repo \(VRRR\) auction under LAF(?: on (.+))?$/i', $title, $matches)) {
+            $tenor = (int) $matches[1];
+
+            if (! in_array($tenor, [3, 7, 14, 30], true)) {
+                return null;
+            }
+
+            $date = isset($matches[2]) && trim($matches[2]) !== '' ? trim($matches[2]) : null;
+            $context = $date ? " scheduled for {$date}" : ' announced under LAF';
+            $contextHi = $date ? "{$date} के लिए निर्धारित" : 'LAF के अंतर्गत घोषित';
+
+            return $this->payload(
+                $item,
+                "What tenor did RBI announce for the VRRR auction{$context}?",
+                "RBI ने {$contextHi} VRRR नीलामी के लिए कितनी अवधि घोषित की?",
+                "RBI announced a {$tenor}-day Variable Rate Reverse Repo (VRRR) auction{$context}.",
+                "RBI ने {$contextHi} {$tenor}-दिवसीय Variable Rate Reverse Repo (VRRR) नीलामी घोषित की।",
                 collect([3, 7, 14, 30])->map(fn ($days) => ["{$days} days", "{$days} दिन", $days === $tenor])->all(),
             );
         }
