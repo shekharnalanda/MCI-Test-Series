@@ -115,6 +115,13 @@ Schedule::command(
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
+Schedule::command(
+    'mci:wikidata-capitals --limit=150'
+)
+    ->dailyAt('03:30')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(45);
+
 Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
     ->hourlyAt(35)
     ->withoutOverlapping(55)
