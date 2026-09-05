@@ -30,11 +30,14 @@ class TrustedSourceHealthService
         }
 
         try {
-            $response = Http::acceptJson()
-                ->withUserAgent('MCI-Test-Series-Source-Monitor/1.0')
+            $response = Http::withHeaders([
+                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language' => 'en-IN,en;q=0.9,hi;q=0.8',
+            ])
+                ->withUserAgent('Mozilla/5.0 (compatible; MCI-Test-Series-Source-Monitor/1.0; +https://test.mciedu.com)')
                 ->timeout(12)
                 ->retry(2, 250, throw: false)
-                ->get($source->base_url);
+                ->get($this->probeUrl($source));
 
             $healthy = $response->status() >= 200 && $response->status() < 400;
             $values = ['last_checked_at' => $checkedAt];
@@ -141,5 +144,16 @@ class TrustedSourceHealthService
             && filter_var($url, FILTER_VALIDATE_URL) !== false
             && parse_url($url, PHP_URL_SCHEME) === 'https'
             && filled(parse_url($url, PHP_URL_HOST));
+    }
+
+    private function probeUrl(ContentSource $source): string
+    {
+        return match ($source->slug) {
+            'upsc' => 'https://www.upsc.gov.in/examinations/active-exams',
+            'ssc' => 'https://ssc.gov.in/',
+            'nta' => 'https://nta.ac.in/',
+            'ncert' => 'https://ncert.nic.in/textbook.php',
+            default => (string) $source->base_url,
+        };
     }
 }

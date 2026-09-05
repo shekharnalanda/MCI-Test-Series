@@ -58,7 +58,7 @@ class ContentSourceSeeder extends Seeder
                 'name' => 'Union Public Service Commission',
                 'slug' => 'upsc',
                 'source_type' => 'official',
-                'base_url' => 'https://upsc.gov.in',
+                'base_url' => 'https://www.upsc.gov.in',
                 'feed_url' => null,
                 'trust_score' => 100,
                 'allow_current_affairs' => false,

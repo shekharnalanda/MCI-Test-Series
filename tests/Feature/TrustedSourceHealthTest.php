@@ -8,6 +8,7 @@ use App\Services\TrustedSourceHealthService;
 use Database\Seeders\ContentSourceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\Request;
 use Tests\TestCase;
 
 class TrustedSourceHealthTest extends TestCase
@@ -78,6 +79,28 @@ class TrustedSourceHealthTest extends TestCase
 
         $this->assertSame(7, ContentSource::whereNotNull('last_checked_at')->count());
         $this->assertSame(7, ContentSourceCheck::count());
+    }
+
+    public function test_registered_official_sources_use_stable_public_probe_pages(): void
+    {
+        $this->seed(ContentSourceSeeder::class);
+        Http::fake(['*' => Http::response('ok', 200)]);
+
+        foreach ([
+            'upsc' => 'https://www.upsc.gov.in/examinations/active-exams',
+            'ssc' => 'https://ssc.gov.in/',
+            'nta' => 'https://nta.ac.in/',
+            'ncert' => 'https://ncert.nic.in/textbook.php',
+        ] as $slug => $expectedUrl) {
+            app(TrustedSourceHealthService::class)->check(
+                ContentSource::where('slug', $slug)->firstOrFail()
+            );
+
+            Http::assertSent(fn (Request $request) =>
+                $request->url() === $expectedUrl
+                && str_contains((string) $request->header('User-Agent')[0], 'MCI-Test-Series-Source-Monitor')
+            );
+        }
     }
 
     private function source(array $overrides = []): ContentSource
