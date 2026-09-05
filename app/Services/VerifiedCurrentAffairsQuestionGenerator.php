@@ -13,7 +13,7 @@ class VerifiedCurrentAffairsQuestionGenerator
 
     public function generate(int $limit = 20, bool $dryRun = false): array
     {
-        $facts = CurrentAffairItem::query()
+        $eligibleFacts = CurrentAffairItem::query()
             ->with('source')
             ->where('status', 'approved')
             ->where('question_generated', false)
@@ -25,12 +25,23 @@ class VerifiedCurrentAffairsQuestionGenerator
             ->filter()
             ->values();
 
-        $amounts = $facts->pluck('amount')->unique()->values();
+        $amounts = CurrentAffairItem::query()
+            ->with('source')
+            ->whereIn('status', ['approved', 'processed'])
+            ->whereHas('source', fn ($query) => $query->where('slug', 'reserve-bank-of-india'))
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (CurrentAffairItem $item) => $this->penaltyFact($item))
+            ->filter()
+            ->pluck('amount')
+            ->unique()
+            ->values();
         $generated = 0;
         $skipped = 0;
         $failed = 0;
 
-        foreach ($facts->take(max(1, min($limit, 100))) as $fact) {
+        foreach ($eligibleFacts->take(max(1, min($limit, 100))) as $fact) {
             $distractors = $amounts->reject(fn ($amount) => $amount === $fact['amount'])->take(3);
 
             if ($distractors->count() !== 3) {
