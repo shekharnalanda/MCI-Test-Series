@@ -91,7 +91,7 @@ class WikidataCountryCapitalImporter
                 'source_url' => $fact['country_url'],
                 'source_reference' => 'wikidata-country-capital',
                 'source_published_at' => now()->toDateString(),
-                'generation_method' => 'automated_open_data',
+                'generation_method' => 'automated',
                 'options' => $options,
             ];
         })->all();
