@@ -100,7 +100,7 @@ class WikidataCountryCapitalImporter
             return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true];
         }
 
-        $batch = $this->ingestion->ingest($questions, $source, 'wikidata');
+        $batch = $this->ingestion->ingest($questions, $source, 'json');
 
         return [
             'fetched' => count($questions),
