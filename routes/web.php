@@ -42,7 +42,7 @@ Route::middleware('guest')->group(function () {
 Route::get('/free-demo', [\App\Http\Controllers\DemoController::class, 'create'])
     ->name('demo.create');
 Route::post('/free-demo/send-otp', [\App\Http\Controllers\DemoController::class, 'sendOtp'])
-    ->middleware('throttle:3,10')
+    ->middleware('throttle:5,2')
     ->name('demo.send-otp');
 Route::post('/free-demo/verify-otp', [\App\Http\Controllers\DemoController::class, 'verifyOtp'])
     ->middleware('throttle:10,10')
