@@ -38,6 +38,15 @@ Route::middleware('guest')->group(function () {
     )->name('admission.success');
 });
 
+
+Route::get('/free-demo', [\App\Http\Controllers\DemoController::class, 'create'])
+    ->name('demo.create');
+Route::post('/free-demo/send-otp', [\App\Http\Controllers\DemoController::class, 'sendOtp'])
+    ->middleware('throttle:3,10')
+    ->name('demo.send-otp');
+Route::post('/free-demo/verify-otp', [\App\Http\Controllers\DemoController::class, 'verifyOtp'])
+    ->middleware('throttle:10,10')
+    ->name('demo.verify-otp');
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
