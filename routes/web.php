@@ -151,3 +151,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('/content/tests/{test}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleTest'])->name('content.tests.toggle');
     Route::patch('/content/series/{series}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleSeries'])->name('content.series.toggle');
 });
+
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/change-password', [\App\Http\Controllers\Admin\PasswordController::class, 'edit'])
+        ->name('admin.password.edit');
+    Route::put('/admin/change-password', [\App\Http\Controllers\Admin\PasswordController::class, 'update'])
+        ->name('admin.password.update');
+});
