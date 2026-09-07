@@ -1,8 +1,9 @@
 {
   "name": "MCI Test Series",
   "short_name": "MCI Tests",
+  "id": "/",
   "description": "Bilingual competitive exam mock tests and practice series.",
-  "start_url": "/?source=pwa",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f6f9fd",

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mci-test-series-v2';
+const CACHE_NAME = 'mci-test-series-v3';
 const STATIC_ASSETS = ['/images/mci-app-icon-192.png', '/images/mci-app-icon-512.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', event => {

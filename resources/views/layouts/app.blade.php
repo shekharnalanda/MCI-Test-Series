@@ -4,6 +4,14 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="MCI Test Series - bilingual online mock tests and practice sets for competitive examinations.">
 <meta name="theme-color" content="#082654">
+<script>
+window.__mciInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function (event) {
+  event.preventDefault();
+  window.__mciInstallPrompt = event;
+  window.dispatchEvent(new Event('mci-install-ready'));
+});
+</script>
 <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 <link rel="apple-touch-icon" href="{{ asset('images/mci-test-series-logo.png') }}">
 <title>@yield('title','MCI Test Series')</title>
@@ -18,15 +26,15 @@
 <script>
 (() => {
   const button = document.getElementById('pwa-install-button');
-  let installPrompt = null;
+  let installPrompt = window.__mciInstallPrompt;
   const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   if (standalone && button) { button.textContent = '✓ App Installed'; button.disabled = true; }
 
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();
-    installPrompt = event;
+  window.addEventListener('mci-install-ready', () => {
+    installPrompt = window.__mciInstallPrompt;
     if (button) button.hidden = false;
   });
+  if (window.__mciInstallPrompt) installPrompt = window.__mciInstallPrompt;
 
   button?.addEventListener('click', async () => {
     if (standalone) return;
@@ -35,6 +43,7 @@
       const result = await installPrompt.userChoice;
       if (result.outcome === 'accepted') button.hidden = true;
       installPrompt = null;
+      window.__mciInstallPrompt = null;
       return;
     }
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
