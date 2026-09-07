@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Exam;
+use App\Models\Test;
 use App\Services\AutomaticTestGenerator;
 use Illuminate\Console\Command;
 use RuntimeException;
@@ -13,7 +14,8 @@ class GenerateAutomaticTestSeries extends Command
         {--per-exam=1 : Tests to generate for each active exam}
         {--questions=25 : Questions in each generated test}
         {--difficulty=mixed : easy, medium, hard, or mixed}
-        {--type=practice : Generated test type}';
+        {--type=practice : Generated test type}
+        {--max-per-exam=10 : Maximum active automatic tests of this type per exam}';
 
     protected $description = 'Generate fair-rotation tests for every active exam with enough questions';
 
@@ -21,6 +23,8 @@ class GenerateAutomaticTestSeries extends Command
     {
         $perExam = max(1, (int) $this->option('per-exam'));
         $questions = max(1, (int) $this->option('questions'));
+        $maxPerExam = max(1, (int) $this->option('max-per-exam'));
+        $type = (string) $this->option('type');
         $generated = 0;
         $skipped = 0;
 
@@ -31,16 +35,33 @@ class GenerateAutomaticTestSeries extends Command
                 $generator,
                 $perExam,
                 $questions,
+                $maxPerExam,
+                $type,
                 &$generated,
                 &$skipped
             ): void {
-                for ($index = 0; $index < $perExam; $index++) {
+                $existing = Test::query()
+                    ->where('exam_id', $exam->id)
+                    ->where('test_type', $type)
+                    ->where('auto_generated', true)
+                    ->where('is_active', true)
+                    ->count();
+
+                $toGenerate = min($perExam, max(0, $maxPerExam - $existing));
+
+                if ($toGenerate === 0) {
+                    $skipped++;
+
+                    return;
+                }
+
+                for ($index = 0; $index < $toGenerate; $index++) {
                     try {
                         $generator->generate(
                             $exam,
                             $questions,
                             (string) $this->option('difficulty'),
-                            (string) $this->option('type')
+                            $type
                         );
                         $generated++;
                     } catch (RuntimeException $exception) {

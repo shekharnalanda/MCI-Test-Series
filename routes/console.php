@@ -109,9 +109,16 @@ Schedule::command(
 
 
 Schedule::command(
-    'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice'
+    'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice --max-per-exam=10'
 )
     ->dailyAt('03:00')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(45);
+
+Schedule::command(
+    'test-series:generate --per-exam=1 --questions=100 --difficulty=mixed --type=full_mock --max-per-exam=5'
+)
+    ->dailyAt('03:10')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
