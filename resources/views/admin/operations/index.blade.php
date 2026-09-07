@@ -73,9 +73,26 @@
 
 <div class="grid" style="margin-top:30px">
 <section class="card"><h2>Packages</h2>
-@foreach($packages as $package)<p><strong>{{ $package->name }}</strong> — ₹{{ number_format($package->price, 2) }}, {{ $package->test_limit }} tests / {{ $package->validity_days }} days
+<p style="color:#64748b">Use Edit Package to change charges, limits or validity.</p>
+@foreach($packages as $package)
+<div style="padding:14px 0;border-top:1px solid #e2e8f0">
+<p style="margin:0 0 10px"><strong>{{ $package->name }}</strong> — ₹{{ number_format($package->price, 2) }}, {{ $package->test_limit }} tests / {{ $package->validity_days }} days</p>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<details style="flex:1;min-width:250px"><summary style="cursor:pointer;display:inline-block;padding:9px 14px;border-radius:7px;background:#0f62a8;color:#fff;font-weight:700">Edit Package</summary>
+<form method="POST" action="{{ route('admin.operations.packages.update', $package->id) }}" style="margin-top:14px;padding:14px;background:#f8fafc;border-radius:10px">@csrf @method('PUT')
+<p><label>Package Name</label><input name="name" value="{{ $package->name }}" required style="width:100%;padding:10px"></p>
+<p><label>Hindi Name</label><input name="name_hi" value="{{ $package->name_hi }}" style="width:100%;padding:10px"></p>
+<p><label>Applicable Exam</label><select name="exam_id" style="width:100%;padding:10px"><option value="">All exams</option>@foreach($exams as $exam)<option value="{{ $exam->id }}" @selected($package->exam_id == $exam->id)>{{ $exam->name }}</option>@endforeach</select></p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px">
+<p><label>Charge (₹)</label><input name="price" type="number" min="0" max="9999999.99" step="0.01" value="{{ $package->price }}" required style="width:100%;padding:10px"></p>
+<p><label>Test Limit</label><input name="test_limit" type="number" min="1" max="100000" value="{{ $package->test_limit }}" required style="width:100%;padding:10px"></p>
+<p><label>Validity Days</label><input name="validity_days" type="number" min="1" max="3650" value="{{ $package->validity_days }}" required style="width:100%;padding:10px"></p>
+</div><button type="submit">Save Changes</button>
+</form></details>
 <form method="POST" action="{{ route('admin.operations.packages.toggle', $package->id) }}" style="display:inline">@csrf @method('PATCH')
-<button type="submit">{{ $package->is_active ? 'Deactivate' : 'Activate' }}</button></form></p>@endforeach
+<button type="submit">{{ $package->is_active ? 'Deactivate' : 'Activate' }}</button></form>
+</div></div>
+@endforeach
 </section>
 <section class="card"><h2>Exams</h2>
 @foreach($exams as $exam)<p><strong>{{ $exam->name }}</strong> @if($exam->name_hi) / {{ $exam->name_hi }} @endif

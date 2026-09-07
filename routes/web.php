@@ -136,6 +136,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::patch('/operations/students/{user}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleStudent'])->name('operations.students.toggle');
     Route::post('/operations/students/{profile}/package', [\App\Http\Controllers\Admin\OperationsController::class, 'assignPackage'])->name('operations.students.package');
     Route::post('/operations/packages', [\App\Http\Controllers\Admin\OperationsController::class, 'storePackage'])->name('operations.packages.store');
+    Route::put('/operations/packages/{package}', [\App\Http\Controllers\Admin\OperationsController::class, 'updatePackage'])->name('operations.packages.update');
     Route::patch('/operations/packages/{package}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'togglePackage'])->name('operations.packages.toggle');
     Route::post('/operations/exams', [\App\Http\Controllers\Admin\OperationsController::class, 'storeExam'])->name('operations.exams.store');
     Route::patch('/operations/exams/{exam}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleExam'])->name('operations.exams.toggle');

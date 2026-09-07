@@ -126,6 +126,27 @@ class OperationsController extends Controller
         return back()->with('success', 'Package created successfully.');
     }
 
+
+    public function updatePackage(Request $request, int $package): RedirectResponse
+    {
+        abort_unless(DB::table('packages')->where('id', $package)->exists(), 404);
+
+        $data = $request->validate([
+            'exam_id' => ['nullable', 'integer', 'exists:exams,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'name_hi' => ['nullable', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
+            'test_limit' => ['required', 'integer', 'min:1', 'max:100000'],
+            'validity_days' => ['required', 'integer', 'min:1', 'max:3650'],
+        ]);
+
+        DB::table('packages')->where('id', $package)->update([
+            ...$data,
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'Package details and charges updated successfully.');
+    }
     public function togglePackage(int $package): RedirectResponse
     {
         $record = DB::table('packages')->where('id', $package)->first();
