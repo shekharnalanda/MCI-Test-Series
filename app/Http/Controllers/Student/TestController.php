@@ -8,11 +8,12 @@ use App\Models\TestAttempt;
 use App\Models\Exam;
 use App\Models\ExamCategory;
 use App\Services\ExamEngineService;
+use App\Services\StudentTestAccessService;
 use Illuminate\Http\Request;
 
 class TestController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, StudentTestAccessService $access)
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -21,10 +22,21 @@ class TestController extends Controller
             'type' => ['nullable', 'string', 'max:50'],
         ]);
         $demoAccess = (bool) $request->session()->get('demo_access', false);
+        $student = $request->user()->studentProfile;
+        $enrollment = $demoAccess ? null : ($student ? $access->activeEnrollment($student) : null);
+        $allowedIds = $enrollment ? $access->allowedTestIds($enrollment) : [];
+
+        $applyAccess = function ($query) use ($demoAccess, $enrollment, $allowedIds) {
+            if ($demoAccess) return $query->where('is_demo', true);
+            if (! $enrollment) return $query->whereRaw('1 = 0');
+            if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
+            if ($allowedIds !== null) $query->whereIn('id', $allowedIds);
+            return $query;
+        };
 
         $tests = Test::with('exam.category')
             ->where('is_active', true)
-            ->when($demoAccess, fn ($query) => $query->where('is_demo', true))
+            ->tap($applyAccess)
             ->when($filters['category'] ?? null, fn ($query, $category) =>
                 $query->whereHas('exam', fn ($exam) => $exam->where('exam_category_id', $category)))
             ->when($filters['exam'] ?? null, fn ($query, $exam) => $query->where('exam_id', $exam))
@@ -39,19 +51,25 @@ class TestController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $testScope = fn ($query) => $query->where('is_active', true)
-            ->when($demoAccess, fn ($tests) => $tests->where('is_demo', true));
+        $testScope = function ($query) use ($demoAccess, $enrollment, $allowedIds) {
+            $query->where('is_active', true);
+            if ($demoAccess) return $query->where('is_demo', true);
+            if (! $enrollment) return $query->whereRaw('1 = 0');
+            if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
+            if ($allowedIds !== null) $query->whereIn('id', $allowedIds);
+            return $query;
+        };
         $categories = ExamCategory::whereHas('exams.tests', $testScope)->orderBy('name')->get(['id', 'name']);
         $exams = Exam::whereHas('tests', $testScope)
             ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('exam_category_id', $category))
             ->orderBy('name')->get(['id', 'name', 'exam_category_id']);
-        $testTypes = Test::where('is_active', true)->when($demoAccess, fn ($query) => $query->where('is_demo', true))
+        $testTypes = Test::where('is_active', true)->tap($applyAccess)
             ->whereNotNull('test_type')->distinct()->orderBy('test_type')->pluck('test_type');
 
-        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess'));
+        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess', 'enrollment'));
     }
 
-    public function start(Test $test, ExamEngineService $engine)
+    public function start(Test $test, ExamEngineService $engine, StudentTestAccessService $access)
     {
         if ((bool) request()->session()->get('demo_access', false)) {
             abort_unless($test->is_active && $test->is_demo, 403, 'This test is not included in the free demo.');
@@ -59,7 +77,13 @@ class TestController extends Controller
 
         $student = auth()->user()->studentProfile;
         abort_unless($student && $student->status === 'active', 403);
+        if (! (bool) request()->session()->get('demo_access', false)) {
+            $enrollment = $access->activeEnrollment($student);
+            abort_unless($enrollment, 403, 'No active test package is assigned.');
+            abort_unless($access->allows($enrollment, $test), 403, 'This test is not included in your package.');
+        }
         $attempt = $engine->start($test, $student);
+        if (isset($enrollment)) $access->syncUsage($enrollment);
 
         return redirect()->route('student.attempts.show', $attempt);
     }

@@ -14,6 +14,11 @@
 </style>
 
 <h1>{{ $demoAccess ? 'Free Demo Tests' : 'Available Tests' }}</h1>
+@if(!$demoAccess && $enrollment)
+<div class="result-line"><span><strong>Package:</strong> {{ $enrollment->package_name ?? 'Assigned Package' }}</span><span><strong>Access:</strong> {{ $enrollment->test_limit === null ? 'Unlimited tests' : $enrollment->test_limit.' tests' }} · valid until {{ $enrollment->expires_at ? \Carbon\Carbon::parse($enrollment->expires_at)->format('d M Y') : 'no expiry' }}</span></div>
+@elseif(!$demoAccess)
+<div class="error">No active test package is assigned to this account. Please contact MCI administration.</div>
+@endif
 <div class="test-toolbar">
 <form method="GET" action="{{ route('student.tests.index') }}">
 <div><label for="q">Search Test</label><input id="q" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Test or exam name"></div>
