@@ -1,5 +1,5 @@
 const CACHE_NAME = 'mci-test-series-v1';
-const STATIC_ASSETS = ['/images/mci-test-series-logo.png', '/manifest.webmanifest'];
+const STATIC_ASSETS = ['/images/mci-app-icon-192.png', '/images/mci-app-icon-512.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS)));
