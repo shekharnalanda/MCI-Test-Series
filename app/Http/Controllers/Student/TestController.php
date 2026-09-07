@@ -20,7 +20,7 @@ class TestController extends Controller
             'exam' => ['nullable', 'integer'],
             'type' => ['nullable', 'string', 'max:50'],
         ]);
-        $demoAccess = $request->session()->boolean('demo_access');
+        $demoAccess = (bool) $request->session()->get('demo_access', false);
 
         $tests = Test::with('exam.category')
             ->where('is_active', true)
@@ -53,7 +53,7 @@ class TestController extends Controller
 
     public function start(Test $test, ExamEngineService $engine)
     {
-        if (request()->session()->boolean('demo_access')) {
+        if ((bool) request()->session()->get('demo_access', false)) {
             abort_unless($test->is_active && $test->is_demo, 403, 'This test is not included in the free demo.');
         }
 
