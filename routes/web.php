@@ -159,3 +159,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::put('/admin/change-password', [\App\Http\Controllers\Admin\PasswordController::class, 'update'])
         ->name('admin.password.update');
 });
+
+Route::middleware('guest')->group(function () {
+    Route::get('/admin/forgot-password', [\App\Http\Controllers\AdminPasswordResetController::class, 'create'])->name('admin.password.forgot');
+    Route::post('/admin/forgot-password/send-otp', [\App\Http\Controllers\AdminPasswordResetController::class, 'sendOtp'])->middleware('throttle:3,10')->name('admin.password.forgot.send');
+    Route::post('/admin/forgot-password/verify-otp', [\App\Http\Controllers\AdminPasswordResetController::class, 'verifyOtp'])->middleware('throttle:10,10')->name('admin.password.forgot.verify');
+    Route::put('/admin/forgot-password/reset', [\App\Http\Controllers\AdminPasswordResetController::class, 'reset'])->middleware('throttle:5,10')->name('admin.password.forgot.reset');
+});

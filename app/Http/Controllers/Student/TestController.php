@@ -10,144 +10,67 @@ use Illuminate\Http\Request;
 
 class TestController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $tests = Test::with('exam')
             ->where('is_active', true)
+            ->when($request->session()->boolean('demo_access'), fn ($query) => $query->where('is_demo', true))
             ->latest()
             ->paginate(20);
 
         return view('student.tests.index', compact('tests'));
     }
 
-    public function start(
-        Test $test,
-        ExamEngineService $engine
-    ) {
+    public function start(Test $test, ExamEngineService $engine)
+    {
+        if (request()->session()->boolean('demo_access')) {
+            abort_unless($test->is_active && $test->is_demo, 403, 'This test is not included in the free demo.');
+        }
+
         $student = auth()->user()->studentProfile;
-
         abort_unless($student && $student->status === 'active', 403);
-
         $attempt = $engine->start($test, $student);
 
-        return redirect()->route(
-            'student.attempts.show',
-            $attempt
-        );
+        return redirect()->route('student.attempts.show', $attempt);
     }
 
-    public function show(
-        TestAttempt $attempt,
-        ExamEngineService $engine
-    ) {
+    public function show(TestAttempt $attempt, ExamEngineService $engine)
+    {
         $this->authorizeAttempt($attempt);
-
-        if ($attempt->status === 'evaluated') {
-            return redirect()->route(
-                'student.attempts.result',
-                $attempt
-            );
-        }
-
-        if ($engine->isExpired($attempt)) {
-            $engine->submit($attempt);
-
-            return redirect()->route(
-                'student.attempts.result',
-                $attempt
-            );
-        }
-
-        $attempt->load([
-            'test',
-            'attemptQuestions.question.options',
-            'answers',
-        ]);
-
-        $deadline = $attempt->started_at
-            ->copy()
-            ->addMinutes($attempt->test->duration_minutes);
-
-        return view(
-            'student.tests.exam',
-            compact('attempt', 'deadline')
-        );
+        if ($attempt->status === 'evaluated') return redirect()->route('student.attempts.result', $attempt);
+        if ($engine->isExpired($attempt)) { $engine->submit($attempt); return redirect()->route('student.attempts.result', $attempt); }
+        $attempt->load(['test', 'attemptQuestions.question.options', 'answers']);
+        $deadline = $attempt->started_at->copy()->addMinutes($attempt->test->duration_minutes);
+        return view('student.tests.exam', compact('attempt', 'deadline'));
     }
 
-    public function answer(
-        Request $request,
-        TestAttempt $attempt,
-        ExamEngineService $engine
-    ) {
+    public function answer(Request $request, TestAttempt $attempt, ExamEngineService $engine)
+    {
         $this->authorizeAttempt($attempt);
-
-        if ($engine->isExpired($attempt)) {
-            $engine->submit($attempt);
-
-            return response()->json([
-                'expired' => true,
-            ], 409);
-        }
-
-        $validated = $request->validate([
-            'question_id' => ['required', 'integer'],
-            'selected_option_id' => ['nullable', 'integer'],
-            'marked_for_review' => ['nullable', 'boolean'],
-        ]);
-
-        $engine->saveAnswer(
-            $attempt,
-            (int) $validated['question_id'],
-            isset($validated['selected_option_id'])
-                ? (int) $validated['selected_option_id']
-                : null,
-            (bool) ($validated['marked_for_review'] ?? false)
-        );
-
-        return response()->json([
-            'saved' => true,
-        ]);
+        if ($engine->isExpired($attempt)) { $engine->submit($attempt); return response()->json(['expired' => true], 409); }
+        $validated = $request->validate(['question_id' => ['required','integer'], 'selected_option_id' => ['nullable','integer'], 'marked_for_review' => ['nullable','boolean']]);
+        $engine->saveAnswer($attempt, (int) $validated['question_id'], $validated['selected_option_id'] ?? null, (bool) ($validated['marked_for_review'] ?? false));
+        return response()->json(['saved' => true]);
     }
 
-    public function submit(
-        TestAttempt $attempt,
-        ExamEngineService $engine
-    ) {
+    public function submit(TestAttempt $attempt, ExamEngineService $engine)
+    {
         $this->authorizeAttempt($attempt);
-
         $engine->submit($attempt);
-
-        return redirect()->route(
-            'student.attempts.result',
-            $attempt
-        );
+        return redirect()->route('student.attempts.result', $attempt);
     }
 
     public function result(TestAttempt $attempt)
     {
         $this->authorizeAttempt($attempt);
-
         abort_unless($attempt->status === 'evaluated', 404);
-
-        $attempt->load([
-            'test.exam',
-            'answers.question',
-        ]);
-
-        return view(
-            'student.tests.result',
-            compact('attempt')
-        );
+        $attempt->load(['test.exam', 'answers.question']);
+        return view('student.tests.result', compact('attempt'));
     }
 
     private function authorizeAttempt(TestAttempt $attempt): void
     {
         $student = auth()->user()->studentProfile;
-
-        abort_unless(
-            $student &&
-            $attempt->student_profile_id === $student->id,
-            403
-        );
+        abort_unless($student && $attempt->student_profile_id === $student->id, 403);
     }
 }

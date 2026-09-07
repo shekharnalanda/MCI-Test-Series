@@ -23,5 +23,6 @@
 <br><br>
 <button type="submit">Login</button>
 </form>
+<p style="margin-top:18px"><a href="{{ route('admin.password.forgot') }}">Forgot Admin Password?</a></p>
 </div>
 @endsection

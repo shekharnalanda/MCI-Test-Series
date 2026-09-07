@@ -39,10 +39,14 @@ class DemoController extends Controller
         }
 
         $user = DB::transaction(function () use ($validated) {
+            // A demo OTP must never authenticate an existing student or admin.
+            $normalizedEmail = Str::lower(trim($validated['email']));
+            $demoEmail = 'demo+'.substr(hash('sha256', $normalizedEmail), 0, 24).'@test.mciedu.local';
+
             $user = User::firstOrCreate(
-                ['email' => $validated['email']],
+                ['email' => $demoEmail],
                 [
-                    'name' => Str::before($validated['email'], '@'),
+                    'name' => 'Demo Student',
                     'password' => Hash::make(Str::random(40)),
                     'role' => 'student',
                     'is_active' => true,
@@ -52,6 +56,7 @@ class DemoController extends Controller
 
             $user->forceFill([
                 'email_verified_at' => $user->email_verified_at ?: now(),
+                'role' => 'student',
                 'is_active' => true,
             ])->save();
 
@@ -69,6 +74,7 @@ class DemoController extends Controller
 
         Auth::login($user, true);
         $request->session()->regenerate();
+        $request->session()->put('demo_access', true);
 
         return redirect()->route('student.tests.index')
             ->with('success', 'Email verified. Your free demo is ready.');
