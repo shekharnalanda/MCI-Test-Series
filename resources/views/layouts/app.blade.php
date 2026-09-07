@@ -44,7 +44,22 @@
   });
 
   window.addEventListener('appinstalled', () => { if (button) { button.textContent = '✓ App Installed'; button.disabled = true; } });
-  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+      try {
+        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        await navigator.serviceWorker.ready;
+        if (!navigator.serviceWorker.controller && !sessionStorage.getItem('mci-pwa-activated')) {
+          sessionStorage.setItem('mci-pwa-activated', '1');
+          window.location.reload();
+          return;
+        }
+        sessionStorage.removeItem('mci-pwa-activated');
+      } catch (error) {
+        console.error('MCI app installation service could not start.', error);
+      }
+    });
+  }
 })();
 </script>
 </body></html>
