@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Test;
 use App\Models\TestAttempt;
+use App\Models\Exam;
+use App\Models\ExamCategory;
 use App\Services\ExamEngineService;
 use Illuminate\Http\Request;
 
@@ -12,13 +14,41 @@ class TestController extends Controller
 {
     public function index(Request $request)
     {
-        $tests = Test::with('exam')
-            ->where('is_active', true)
-            ->when($request->session()->boolean('demo_access'), fn ($query) => $query->where('is_demo', true))
-            ->latest()
-            ->paginate(20);
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'integer'],
+            'exam' => ['nullable', 'integer'],
+            'type' => ['nullable', 'string', 'max:50'],
+        ]);
+        $demoAccess = $request->session()->boolean('demo_access');
 
-        return view('student.tests.index', compact('tests'));
+        $tests = Test::with('exam.category')
+            ->where('is_active', true)
+            ->when($demoAccess, fn ($query) => $query->where('is_demo', true))
+            ->when($filters['category'] ?? null, fn ($query, $category) =>
+                $query->whereHas('exam', fn ($exam) => $exam->where('exam_category_id', $category)))
+            ->when($filters['exam'] ?? null, fn ($query, $exam) => $query->where('exam_id', $exam))
+            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('test_type', $type))
+            ->when($filters['q'] ?? null, function ($query, $search) {
+                $query->where(function ($nested) use ($search) {
+                    $nested->where('title', 'like', '%'.$search.'%')
+                        ->orWhereHas('exam', fn ($exam) => $exam->where('name', 'like', '%'.$search.'%'));
+                });
+            })
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $testScope = fn ($query) => $query->where('is_active', true)
+            ->when($demoAccess, fn ($tests) => $tests->where('is_demo', true));
+        $categories = ExamCategory::whereHas('exams.tests', $testScope)->orderBy('name')->get(['id', 'name']);
+        $exams = Exam::whereHas('tests', $testScope)
+            ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('exam_category_id', $category))
+            ->orderBy('name')->get(['id', 'name', 'exam_category_id']);
+        $testTypes = Test::where('is_active', true)->when($demoAccess, fn ($query) => $query->where('is_demo', true))
+            ->whereNotNull('test_type')->distinct()->orderBy('test_type')->pluck('test_type');
+
+        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess'));
     }
 
     public function start(Test $test, ExamEngineService $engine)
