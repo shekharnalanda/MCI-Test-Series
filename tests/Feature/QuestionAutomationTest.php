@@ -147,4 +147,27 @@ class QuestionAutomationTest extends TestCase
             data_get($test->generation_rules, 'selection')
         );
     }
+
+    public function test_full_mock_uses_a_separate_series_and_correct_titles(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $exam = Exam::where(
+            'name',
+            'General Competitive Examination'
+        )->firstOrFail();
+
+        $test = app(AutomaticTestGenerator::class)->generate(
+            $exam,
+            5,
+            'mixed',
+            'full_mock'
+        );
+
+        $this->assertSame('full_mock', $test->test_type);
+        $this->assertStringContainsString('Full Mock Test', $test->title);
+        $this->assertStringContainsString('फुल मॉक टेस्ट', $test->title_hi);
+        $this->assertSame('auto-full_mock-'.$exam->slug, $test->series->slug);
+        $this->assertSame('full_mock', $test->series->series_type);
+    }
 }

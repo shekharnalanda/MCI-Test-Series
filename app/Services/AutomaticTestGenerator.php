@@ -69,21 +69,34 @@ class AutomaticTestGenerator
             );
         }
 
+        $typeLabels = [
+            'practice' => ['Practice Test', 'प्रैक्टिस टेस्ट'],
+            'full_mock' => ['Full Mock Test', 'फुल मॉक टेस्ट'],
+            'topic' => ['Topic Test', 'टॉपिक टेस्ट'],
+            'previous_year' => ['Previous Year Test', 'पिछले वर्ष का टेस्ट'],
+            'special' => ['Special Test', 'विशेष टेस्ट'],
+        ];
+
+        [$typeLabel, $typeLabelHi] = $typeLabels[$type]
+            ?? ['Test', 'टेस्ट'];
+
         return DB::transaction(function () use (
             $exam,
             $questions,
             $questionCount,
             $difficulty,
-            $type
+            $type,
+            $typeLabel,
+            $typeLabelHi
         ) {
             $series = TestSeries::firstOrCreate(
-                ['slug' => 'auto-'.$exam->slug],
+                ['slug' => 'auto-'.$type.'-'.$exam->slug],
                 [
                     'exam_id' => $exam->id,
-                    'name' => $exam->name.' Automatic Test Series',
+                    'name' => $exam->name.' Automatic '.$typeLabel.' Series',
                     'name_hi' =>
                         ($exam->name_hi ?: $exam->name).
-                        ' ऑटो टेस्ट सीरीज',
+                        ' ऑटो '.$typeLabelHi.' सीरीज',
                     'series_type' => $type,
                     'price' => 0,
                     'is_free' => false,
@@ -102,11 +115,11 @@ class AutomaticTestGenerator
 
                 'title' =>
                     $exam->name.
-                    ' Auto Practice Test '.$sequence,
+                    ' Auto '.$typeLabel.' '.$sequence,
 
                 'title_hi' =>
                     ($exam->name_hi ?: $exam->name).
-                    ' ऑटो प्रैक्टिस टेस्ट '.$sequence,
+                    ' ऑटो '.$typeLabelHi.' '.$sequence,
 
                 'instructions' =>
                     'Automatically generated from verified MCI Question Bank.',
