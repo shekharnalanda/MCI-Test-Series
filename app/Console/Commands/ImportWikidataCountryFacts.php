@@ -18,7 +18,7 @@ class ImportWikidataCountryFacts extends Command
     {
         $family = (string) $this->option('family');
         $families = $family === 'all'
-            ? ['currency', 'continent', 'official-language', 'india-state-capital', 'national-anthem', 'iso-code', 'calling-code', 'iso-alpha-3-code', 'iso-numeric-code', 'internet-domain']
+            ? ['currency', 'continent', 'official-language', 'india-state-capital', 'national-anthem', 'iso-code', 'calling-code', 'iso-alpha-3-code', 'iso-numeric-code', 'internet-domain', 'capital', 'highest-point', 'lowest-point']
             : [$family];
 
         foreach ($families as $current) {

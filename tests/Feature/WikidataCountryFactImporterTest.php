@@ -51,6 +51,22 @@ class WikidataCountryFactImporterTest extends TestCase
         $this->assertNotEmpty($questions->first()->question_text_hi);
     }
 
+    public function test_it_imports_bilingual_country_geography_facts(): void
+    {
+        $this->seed();
+        Http::fake([
+            'https://www.wikidata.org*' => Http::response('ok', 200),
+            'https://query.wikidata.org/*' => Http::response($this->response(), 200),
+        ]);
+
+        $this->artisan('mci:wikidata-country-facts --family=highest-point --limit=20')->assertSuccessful();
+
+        $questions = Question::where('source_reference', 'wikidata-country-highest-point')->get();
+        $this->assertCount(4, $questions);
+        $this->assertStringContainsString('highest point', $questions->first()->question_text);
+        $this->assertStringContainsString('सर्वोच्च स्थल', $questions->first()->question_text_hi);
+    }
+
     private function response(): array
     {
         $facts = [

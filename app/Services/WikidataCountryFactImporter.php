@@ -111,6 +111,33 @@ class WikidataCountryFactImporter
             'explanation_en' => '%s is a country-code top-level internet domain of %s.',
             'explanation_hi' => '%s, %s का country-code top-level internet domain है।',
         ],
+        'capital' => [
+            'property' => 'P36',
+            'topic' => 'Countries Capitals Currencies',
+            'reference' => 'wikidata-country-capital',
+            'question_en' => 'What is the capital of %s?',
+            'question_hi' => '%s की राजधानी क्या है?',
+            'explanation_en' => '%s is the capital of %s.',
+            'explanation_hi' => '%s, %s की राजधानी है।',
+        ],
+        'highest-point' => [
+            'property' => 'P610',
+            'topic' => 'Countries Capitals Currencies',
+            'reference' => 'wikidata-country-highest-point',
+            'question_en' => 'What is the highest point of %s?',
+            'question_hi' => '%s का सर्वोच्च स्थल कौन-सा है?',
+            'explanation_en' => '%s is the highest point of %s.',
+            'explanation_hi' => '%s, %s का सर्वोच्च स्थल है।',
+        ],
+        'lowest-point' => [
+            'property' => 'P1589',
+            'topic' => 'Countries Capitals Currencies',
+            'reference' => 'wikidata-country-lowest-point',
+            'question_en' => 'What is the lowest point of %s?',
+            'question_hi' => '%s का निम्नतम स्थल कौन-सा है?',
+            'explanation_en' => '%s is the lowest point of %s.',
+            'explanation_hi' => '%s, %s का निम्नतम स्थल है।',
+        ],
     ];
 
     public function __construct(
