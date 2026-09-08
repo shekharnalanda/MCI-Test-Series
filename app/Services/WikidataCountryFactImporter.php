@@ -186,6 +186,7 @@ SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?answer ?answerLabelEn 
            rdfs:label ?countryLabelHi.
   ?answer rdfs:label ?answerLabelEn;
           rdfs:label ?answerLabelHi.
+  FILTER NOT EXISTS { ?country wdt:P576 ?dissolvedDate. }
   FILTER(LANG(?countryLabelEn) = "en")
   FILTER(LANG(?countryLabelHi) = "hi")
   FILTER(LANG(?answerLabelEn) = "en")
