@@ -136,6 +136,11 @@ Schedule::command(
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
+Schedule::command('mci:wikidata-elements --limit=150')
+    ->monthlyOn(1, '03:50')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(60);
+
 Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
     ->hourlyAt(35)
     ->withoutOverlapping(55)
