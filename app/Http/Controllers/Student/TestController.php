@@ -137,7 +137,7 @@ class TestController extends Controller
     {
         $this->authorizeAttempt($attempt);
         abort_unless($attempt->status === 'evaluated', 404);
-        $attempt->load(['test.exam', 'answers.question']);
+        $attempt->load(['test.exam', 'attemptQuestions.question.options', 'answers.selectedOption']);
         return view('student.tests.result', compact('attempt'));
     }
 

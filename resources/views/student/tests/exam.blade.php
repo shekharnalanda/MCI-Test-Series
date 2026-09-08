@@ -303,7 +303,7 @@ Total Questions: {{ $attempt->total_questions }}
 </small>
 </div>
 
-@foreach($attempt->attemptQuestions->sortBy('question_order') as $index => $snapshot)
+@foreach($attempt->attemptQuestions->sortBy('question_order')->values() as $index => $snapshot)
 
 @php
 $question = $snapshot->question;
@@ -422,7 +422,7 @@ Save & Next
 
 <div class="palette">
 
-@foreach($attempt->attemptQuestions->sortBy('question_order') as $index => $snapshot)
+@foreach($attempt->attemptQuestions->sortBy('question_order')->values() as $index => $snapshot)
 
 @php
 $saved = $attempt->answers->firstWhere(
