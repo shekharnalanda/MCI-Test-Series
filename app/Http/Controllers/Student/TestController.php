@@ -138,7 +138,11 @@ class TestController extends Controller
         $this->authorizeAttempt($attempt);
         abort_unless($attempt->status === 'evaluated', 404);
         $attempt->load(['test.exam', 'attemptQuestions.question.options', 'answers.selectedOption']);
-        return view('student.tests.result', compact('attempt'));
+        $canReviewAnswers = $attempt->test->answer_visibility === 'immediate'
+            || ($attempt->test->answer_visibility === 'scheduled'
+                && $attempt->test->answers_available_at
+                && now()->greaterThanOrEqualTo($attempt->test->answers_available_at));
+        return view('student.tests.result', compact('attempt', 'canReviewAnswers'));
     }
 
     private function authorizeAttempt(TestAttempt $attempt): void

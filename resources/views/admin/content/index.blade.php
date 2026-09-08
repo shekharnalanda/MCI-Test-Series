@@ -44,9 +44,14 @@
 @foreach($questions as $question)<div class="card"><strong>{{ $question->subject_name }} / {{ $question->topic_name ?? 'General' }}</strong> — {{ $question->difficulty }}<p>{{ $question->question_text }}</p><p>{{ $question->question_text_hi }}</p><small>{{ $question->verification_status }} | {{ $question->is_published ? 'Published' : 'Draft' }}</small></div>@endforeach
 {{ $questions->links() }}
 
-<div class="grid" style="margin-top:24px"><section class="card"><h2>Recent Tests</h2>
-@forelse($tests as $test)<p><strong>{{ $test->title }}</strong><br>{{ $test->exam_name }} — {{ $test->total_questions }} questions
-<form method="POST" action="{{ route('admin.content.tests.toggle', $test->id) }}" style="display:inline">@csrf @method('PATCH')<button>{{ $test->is_active ? 'Deactivate' : 'Activate' }}</button></form></p>@empty<p>No tests generated yet.</p>@endforelse
+<div class="grid" style="margin-top:24px"><section class="card"><h2>Tests & Answer Review</h2>
+<form method="GET" action="{{ route('admin.content.index') }}"><input name="test_search" value="{{ $testSearch }}" placeholder="Search test or exam" style="width:70%;padding:9px"><button>Search</button></form>
+@forelse($tests as $test)<div style="padding:12px 0;border-bottom:1px solid #ddd"><strong>{{ $test->title }}</strong><br>{{ $test->exam_name }} — {{ $test->total_questions }} questions
+<form method="POST" action="{{ route('admin.content.tests.answer-visibility', $test->id) }}" style="margin:8px 0">@csrf @method('PUT')
+<select name="answer_visibility" onchange="this.nextElementSibling.style.display=this.value==='scheduled'?'inline-block':'none'"><option value="immediate" @selected($test->answer_visibility==='immediate')>Show immediately</option><option value="scheduled" @selected($test->answer_visibility==='scheduled')>Show after date/time</option><option value="hidden" @selected($test->answer_visibility==='hidden')>Hide answer key</option></select>
+<input name="answers_available_at" type="datetime-local" value="{{ $test->answers_available_at ? \Illuminate\Support\Carbon::parse($test->answers_available_at)->format('Y-m-d\\TH:i') : '' }}" style="display:{{ $test->answer_visibility==='scheduled'?'inline-block':'none' }}"><button>Save Policy</button></form>
+<form method="POST" action="{{ route('admin.content.tests.toggle', $test->id) }}" style="display:inline">@csrf @method('PATCH')<button>{{ $test->is_active ? 'Deactivate' : 'Activate' }}</button></form></div>@empty<p>No tests generated yet.</p>@endforelse
+{{ $tests->links() }}
 </section><section class="card"><h2>Test Series</h2>
 @forelse($series as $item)<p><strong>{{ $item->name }}</strong><br>{{ $item->exam_name }}
 <form method="POST" action="{{ route('admin.content.series.toggle', $item->id) }}" style="display:inline">@csrf @method('PATCH')<button>{{ $item->is_active ? 'Deactivate' : 'Activate' }}</button></form></p>@empty<p>No test series yet.</p>@endforelse

@@ -14,6 +14,7 @@
 <div class="result-stat"><h2>{{ $attempt->obtained_marks }}</h2><p>Marks Obtained / प्राप्तांक</p></div><div class="result-stat"><h2>{{ $attempt->maximum_marks }}</h2><p>Maximum Marks / पूर्णांक</p></div><div class="result-stat"><h2>{{ $attempt->percentage }}%</h2><p>Percentage / प्रतिशत</p></div><div class="result-stat"><h2>{{ data_get($attempt->analytics,'accuracy',0) }}%</h2><p>Accuracy / शुद्धता</p></div>
 <div class="result-stat"><h2>{{ $attempt->correct_answers }}</h2><p>Correct / सही</p></div><div class="result-stat"><h2>{{ $attempt->wrong_answers }}</h2><p>Wrong / गलत</p></div><div class="result-stat"><h2>{{ $attempt->unanswered }}</h2><p>Unanswered / छोड़े गए</p></div><div class="result-stat"><h2>{{ data_get($attempt->analytics,'attempt_rate',0) }}%</h2><p>Attempt Rate / प्रयास</p></div>
 </div>
+@if($canReviewAnswers)
 <div class="review-heading"><div><h2>Question-wise Review / प्रश्नवार समीक्षा</h2><p>अपने उत्तर को सही उत्तर से मिलाइए।</p></div>@if($attempt->rank)<strong>Rank: {{ $attempt->rank }}</strong>@endif</div>
 @foreach($attempt->attemptQuestions->sortBy('question_order')->values() as $index => $snapshot)
 @php
@@ -26,5 +27,9 @@ $question=$snapshot->question;$answer=$attempt->answers->firstWhere('question_id
 @if($question->explanation||$question->explanation_hi)<div class="review-explanation"><strong>Explanation / व्याख्या:</strong><br>@if($question->explanation){!! nl2br(e($question->explanation)) !!}@endif @if($question->explanation_hi)<br>{!! nl2br(e($question->explanation_hi)) !!}@endif</div>@endif
 </article>
 @endforeach
+@else
+<div class="review-card"><h2>Answer review is not available yet / उत्तर समीक्षा अभी उपलब्ध नहीं है</h2>
+@if($attempt->test->answer_visibility === 'scheduled' && $attempt->test->answers_available_at)<p>Answer key will be available after {{ $attempt->test->answers_available_at->format('d M Y, h:i A') }}.</p>@else<p>The administrator has kept the answer key private for this test.</p>@endif</div>
+@endif
 <div class="result-actions"><a class="btn" href="{{ route('student.tests.index') }}">Back to Tests / टेस्ट सूची</a></div>
 @endsection

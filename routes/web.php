@@ -155,6 +155,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/content/questions', [\App\Http\Controllers\Admin\ContentController::class, 'storeQuestion'])->name('content.questions.store');
     Route::post('/content/generate', [\App\Http\Controllers\Admin\ContentController::class, 'generate'])->name('content.generate');
     Route::patch('/content/tests/{test}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleTest'])->name('content.tests.toggle');
+    Route::put('/content/tests/{test}/answer-visibility', [\App\Http\Controllers\Admin\ContentController::class, 'updateAnswerVisibility'])->name('content.tests.answer-visibility');
     Route::patch('/content/series/{series}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleSeries'])->name('content.series.toggle');
 });
 

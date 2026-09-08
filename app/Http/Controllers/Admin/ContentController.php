@@ -12,8 +12,9 @@ use Illuminate\View\View;
 
 class ContentController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $testSearch = trim((string) $request->query('test_search', ''));
         return view('admin.content.index', [
             'subjects' => DB::table('subjects')->orderBy('sort_order')->orderBy('name')->get(),
             'topics' => DB::table('topics as t')->join('subjects as s', 's.id', '=', 't.subject_id')
@@ -25,7 +26,12 @@ class ContentController extends Controller
                     'q.verification_status', 's.name as subject_name', 't.name as topic_name')
                 ->orderByDesc('q.id')->paginate(15, ['*'], 'questions_page'),
             'tests' => DB::table('tests as t')->leftJoin('exams as e', 'e.id', '=', 't.exam_id')
-                ->select('t.*', 'e.name as exam_name')->orderByDesc('t.id')->limit(30)->get(),
+                ->select('t.*', 'e.name as exam_name')
+                ->when($testSearch !== '', fn ($query) => $query->where(function ($nested) use ($testSearch) {
+                    $nested->where('t.title', 'like', '%'.$testSearch.'%')
+                        ->orWhere('e.name', 'like', '%'.$testSearch.'%');
+                }))->orderByDesc('t.id')->paginate(20, ['*'], 'tests_page')->withQueryString(),
+            'testSearch' => $testSearch,
             'series' => DB::table('test_series as ts')->leftJoin('exams as e', 'e.id', '=', 'ts.exam_id')
                 ->select('ts.*', 'e.name as exam_name')->orderByDesc('ts.id')->limit(30)->get(),
             'counts' => [
@@ -179,6 +185,21 @@ class ContentController extends Controller
         abort_unless($record, 404);
         DB::table('tests')->where('id', $test)->update(['is_active' => !$record->is_active, 'updated_at' => now()]);
         return back()->with('success', 'Test status updated.');
+    }
+
+    public function updateAnswerVisibility(Request $request, int $test): RedirectResponse
+    {
+        $data = $request->validate([
+            'answer_visibility' => ['required', 'in:immediate,scheduled,hidden'],
+            'answers_available_at' => ['nullable', 'date', 'required_if:answer_visibility,scheduled'],
+        ]);
+        abort_unless(DB::table('tests')->where('id', $test)->exists(), 404);
+        DB::table('tests')->where('id', $test)->update([
+            'answer_visibility' => $data['answer_visibility'],
+            'answers_available_at' => $data['answer_visibility'] === 'scheduled' ? $data['answers_available_at'] : null,
+            'updated_at' => now(),
+        ]);
+        return back()->with('success', 'Answer review policy updated.');
     }
 
     public function toggleSeries(int $series): RedirectResponse

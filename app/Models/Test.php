@@ -23,6 +23,7 @@ class Test extends Model
             'is_active' => 'boolean',
             'available_from' => 'datetime',
             'available_until' => 'datetime',
+            'answers_available_at' => 'datetime',
             'generation_rules' => 'array',
         ];
     }
