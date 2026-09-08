@@ -61,6 +61,11 @@ Route::middleware(['auth', 'role:student'])
         Route::get('/tests', [StudentTestController::class, 'index'])
             ->name('tests.index');
 
+        Route::post('/tests/{test}/select', [StudentTestController::class, 'select'])
+            ->name('tests.select');
+        Route::delete('/tests/{test}/select', [StudentTestController::class, 'unselect'])
+            ->name('tests.unselect');
+
         Route::post('/tests/{test}/start', [StudentTestController::class, 'start'])
             ->name('tests.start');
 

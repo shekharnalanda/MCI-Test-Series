@@ -24,13 +24,14 @@ class TestController extends Controller
         $demoAccess = (bool) $request->session()->get('demo_access', false);
         $student = $request->user()->studentProfile;
         $enrollment = $demoAccess ? null : ($student ? $access->activeEnrollment($student) : null);
-        $allowedIds = $enrollment ? $access->allowedTestIds($enrollment) : [];
+        $selectedIds = $enrollment ? ($access->selectedTestIds($enrollment) ?? []) : [];
+        $attemptedIds = $enrollment ? $access->attemptedIds($enrollment) : [];
+        $completedIds = $enrollment ? $access->completedIds($enrollment) : [];
 
-        $applyAccess = function ($query) use ($demoAccess, $enrollment, $allowedIds) {
+        $applyAccess = function ($query) use ($demoAccess, $enrollment) {
             if ($demoAccess) return $query->where('is_demo', true);
             if (! $enrollment) return $query->whereRaw('1 = 0');
             if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
-            if ($allowedIds !== null) $query->whereIn('id', $allowedIds);
             return $query;
         };
 
@@ -51,12 +52,11 @@ class TestController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $testScope = function ($query) use ($demoAccess, $enrollment, $allowedIds) {
+        $testScope = function ($query) use ($demoAccess, $enrollment) {
             $query->where('is_active', true);
             if ($demoAccess) return $query->where('is_demo', true);
             if (! $enrollment) return $query->whereRaw('1 = 0');
             if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
-            if ($allowedIds !== null) $query->whereIn('id', $allowedIds);
             return $query;
         };
         $categories = ExamCategory::whereHas('exams.tests', $testScope)->orderBy('name')->get(['id', 'name']);
@@ -66,7 +66,25 @@ class TestController extends Controller
         $testTypes = Test::where('is_active', true)->tap($applyAccess)
             ->whereNotNull('test_type')->distinct()->orderBy('test_type')->pluck('test_type');
 
-        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess', 'enrollment'));
+        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess', 'enrollment', 'selectedIds', 'attemptedIds', 'completedIds'));
+    }
+
+    public function select(Test $test, StudentTestAccessService $access)
+    {
+        $student = auth()->user()->studentProfile;
+        $enrollment = $student ? $access->activeEnrollment($student) : null;
+        abort_unless($enrollment, 403, 'No active test package is assigned.');
+        try { $access->select($enrollment, $test); } catch (\RuntimeException $e) { return back()->withErrors(['package' => $e->getMessage()]); }
+        return back()->with('success', 'Test added to your personal test pack.');
+    }
+
+    public function unselect(Test $test, StudentTestAccessService $access)
+    {
+        $student = auth()->user()->studentProfile;
+        $enrollment = $student ? $access->activeEnrollment($student) : null;
+        abort_unless($enrollment, 403);
+        try { $access->unselect($enrollment, $test); } catch (\RuntimeException $e) { return back()->withErrors(['package' => $e->getMessage()]); }
+        return back()->with('success', 'Test removed from your pack.');
     }
 
     public function start(Test $test, ExamEngineService $engine, StudentTestAccessService $access)
@@ -81,6 +99,7 @@ class TestController extends Controller
             $enrollment = $access->activeEnrollment($student);
             abort_unless($enrollment, 403, 'No active test package is assigned.');
             abort_unless($access->allows($enrollment, $test), 403, 'This test is not included in your package.');
+            abort_if(in_array((int) $test->id, $access->completedIds($enrollment), true), 403, 'This subscribed test has already been completed.');
         }
         $attempt = $engine->start($test, $student);
         if (isset($enrollment)) $access->syncUsage($enrollment);

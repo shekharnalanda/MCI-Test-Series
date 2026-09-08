@@ -15,7 +15,8 @@
 
 <h1>{{ $demoAccess ? 'Free Demo Tests' : 'Available Tests' }}</h1>
 @if(!$demoAccess && $enrollment)
-<div class="result-line"><span><strong>Package:</strong> {{ $enrollment->package_name ?? 'Assigned Package' }}</span><span><strong>Access:</strong> {{ $enrollment->test_limit === null ? 'Unlimited tests' : $enrollment->test_limit.' tests' }} · valid until {{ $enrollment->expires_at ? \Carbon\Carbon::parse($enrollment->expires_at)->format('d M Y') : 'no expiry' }}</span></div>
+<div class="result-line"><span><strong>Package:</strong> {{ $enrollment->package_name ?? 'Assigned Package' }}</span><span><strong>{{ $enrollment->test_limit === null ? 'Unlimited access' : count($selectedIds).'/'.$enrollment->test_limit.' selected · '.count($completedIds).' completed' }}</strong> · valid until {{ $enrollment->expires_at ? \Carbon\Carbon::parse($enrollment->expires_at)->format('d M Y') : 'no expiry' }}</span></div>
+@if($enrollment->test_limit !== null && count($completedIds) >= $enrollment->test_limit)<div class="error">Your subscribed tests are complete. Please upgrade your package or contact MCI administration.</div>@endif
 @elseif(!$demoAccess)
 <div class="error">No active test package is assigned to this account. Please contact MCI administration.</div>
 @endif
@@ -37,7 +38,18 @@
 <h3>{{ $test->title }}</h3>
 @if($test->exam)<p>{{ $test->exam->name }}@if($test->exam->category) · {{ $test->exam->category->name }}@endif</p>@endif
 <p><strong>Questions:</strong> {{ $test->total_questions }}<br><strong>Duration:</strong> {{ $test->duration_minutes }} Minutes<br><strong>Positive Marks:</strong> {{ $test->positive_marks }}<br><strong>Negative Marks:</strong> {{ $test->negative_marks }}</p>
+@if($demoAccess || $enrollment?->test_limit === null)
 <form method="POST" action="{{ route('student.tests.start',$test) }}">@csrf<button>Start Test</button></form>
+@elseif(in_array($test->id,$completedIds,true))
+<span class="badge" style="background:#dcfce7;color:#166534">✓ Completed</span>
+@elseif(in_array($test->id,$selectedIds,true))
+<div style="display:flex;gap:8px;flex-wrap:wrap"><form method="POST" action="{{ route('student.tests.start',$test) }}">@csrf<button>Start Test</button></form>
+@unless(in_array($test->id,$attemptedIds,true))<form method="POST" action="{{ route('student.tests.unselect',$test) }}">@csrf @method('DELETE')<button type="submit" style="background:#64748b">Remove</button></form>@endunless</div>
+@elseif(count($selectedIds) < (int)$enrollment->test_limit)
+<form method="POST" action="{{ route('student.tests.select',$test) }}">@csrf<button type="submit">+ Add to My Test Pack</button></form>
+@else
+<button type="button" disabled style="background:#94a3b8;cursor:not-allowed">Selection Limit Reached</button>
+@endif
 </div>
 @empty
 <div class="card"><h3>No matching tests found</h3><p>Change or clear the selected filters.</p></div>
