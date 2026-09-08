@@ -18,6 +18,7 @@ class WikidataCountryFactImporter
     private const FAMILIES = [
         'currency' => [
             'property' => 'P38',
+            'topic' => 'Countries Capitals Currencies',
             'reference' => 'wikidata-country-currency',
             'question_en' => 'What is the currency of %s?',
             'question_hi' => '%s की मुद्रा क्या है?',
@@ -26,6 +27,7 @@ class WikidataCountryFactImporter
         ],
         'continent' => [
             'property' => 'P30',
+            'topic' => 'Countries Capitals Currencies',
             'reference' => 'wikidata-country-continent',
             'question_en' => 'On which continent is %s located?',
             'question_hi' => '%s किस महाद्वीप में स्थित है?',
@@ -34,6 +36,7 @@ class WikidataCountryFactImporter
         ],
         'official-language' => [
             'property' => 'P37',
+            'topic' => 'Countries Capitals Currencies',
             'reference' => 'wikidata-country-official-language',
             'question_en' => 'What is the official language of %s?',
             'question_hi' => '%s की आधिकारिक भाषा क्या है?',
@@ -42,11 +45,41 @@ class WikidataCountryFactImporter
         ],
         'india-state-capital' => [
             'property' => 'P36',
+            'topic' => 'Countries Capitals Currencies',
             'reference' => 'wikidata-india-state-capital',
             'question_en' => 'What is the capital of %s?',
             'question_hi' => '%s की राजधानी क्या है?',
             'explanation_en' => '%s is the capital of %s.',
             'explanation_hi' => '%s, %s की राजधानी है।',
+        ],
+        'national-anthem' => [
+            'property' => 'P85',
+            'topic' => 'National Symbols',
+            'reference' => 'wikidata-country-national-anthem',
+            'question_en' => 'What is the national anthem of %s?',
+            'question_hi' => '%s का राष्ट्रगान कौन-सा है?',
+            'explanation_en' => '%s is the national anthem of %s.',
+            'explanation_hi' => '%s, %s का राष्ट्रगान है।',
+        ],
+        'iso-code' => [
+            'property' => 'P297',
+            'topic' => 'Countries Capitals Currencies',
+            'literal' => true,
+            'reference' => 'wikidata-country-iso-code',
+            'question_en' => 'What is the ISO alpha-2 code of %s?',
+            'question_hi' => '%s का ISO alpha-2 कोड क्या है?',
+            'explanation_en' => '%s is the ISO alpha-2 code of %s.',
+            'explanation_hi' => '%s, %s का ISO alpha-2 कोड है।',
+        ],
+        'calling-code' => [
+            'property' => 'P474',
+            'topic' => 'Countries Capitals Currencies',
+            'literal' => true,
+            'reference' => 'wikidata-country-calling-code',
+            'question_en' => 'What is the international calling code of %s?',
+            'question_hi' => '%s का अंतरराष्ट्रीय कॉलिंग कोड क्या है?',
+            'explanation_en' => '%s is the international calling code of %s.',
+            'explanation_hi' => '%s, %s का अंतरराष्ट्रीय कॉलिंग कोड है।',
         ],
     ];
 
@@ -58,7 +91,7 @@ class WikidataCountryFactImporter
 
     public function import(string $family, int $limit = 200, bool $dryRun = false): array
     {
-        $definition = self::FAMILIES[$family] ?? throw new InvalidArgumentException('Supported fact families: currency, continent, official-language, india-state-capital.');
+        $definition = self::FAMILIES[$family] ?? throw new InvalidArgumentException('Unsupported country fact family.');
         $limit = max(10, min($limit, 500));
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
@@ -73,7 +106,7 @@ class WikidataCountryFactImporter
             ->timeout(45)
             ->retry(2, 750, throw: false)
             ->get(self::ENDPOINT, [
-                'query' => $this->query($family, $definition['property'], $limit),
+                'query' => $this->query($family, $definition['property'], (bool) ($definition['literal'] ?? false), $limit),
                 'format' => 'json',
             ]);
 
@@ -97,7 +130,7 @@ class WikidataCountryFactImporter
 
         $subject = Subject::where('name', 'Static GK')->firstOrFail();
         $topic = Topic::where('subject_id', $subject->id)
-            ->where('name', 'Countries Capitals Currencies')
+            ->where('name', $definition['topic'])
             ->firstOrFail();
         $examIds = $subject->exams()->where('is_active', true)->pluck('exams.id')->all();
 
@@ -172,11 +205,17 @@ class WikidataCountryFactImporter
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
-    private function query(string $family, string $property, int $limit): string
+    private function query(string $family, string $property, bool $literal, int $limit): string
     {
         $entityPattern = $family === 'india-state-capital'
             ? 'VALUES ?administrativeType { wd:Q12443800 wd:Q467745 }'.PHP_EOL.'  ?country wdt:P31 ?administrativeType;'
             : '?country wdt:P31 wd:Q3624078;';
+        $answerPattern = $literal
+            ? 'BIND(STR(?answer) AS ?answerLabelEn)'.PHP_EOL.'  BIND(STR(?answer) AS ?answerLabelHi)'
+            : '?answer rdfs:label ?answerLabelEn;'.PHP_EOL.'          rdfs:label ?answerLabelHi.';
+        $answerLanguageFilters = $literal
+            ? ''
+            : 'FILTER(LANG(?answerLabelEn) = "en")'.PHP_EOL.'  FILTER(LANG(?answerLabelHi) = "hi")';
 
         return <<<SPARQL
 SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?answer ?answerLabelEn ?answerLabelHi WHERE {
@@ -184,13 +223,11 @@ SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?answer ?answerLabelEn 
            wdt:{$property} ?answer;
            rdfs:label ?countryLabelEn;
            rdfs:label ?countryLabelHi.
-  ?answer rdfs:label ?answerLabelEn;
-          rdfs:label ?answerLabelHi.
+  {$answerPattern}
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolvedDate. }
   FILTER(LANG(?countryLabelEn) = "en")
   FILTER(LANG(?countryLabelHi) = "hi")
-  FILTER(LANG(?answerLabelEn) = "en")
-  FILTER(LANG(?answerLabelHi) = "hi")
+  {$answerLanguageFilters}
 }
 ORDER BY ?countryLabelEn ?answerLabelEn
 LIMIT {$limit}
