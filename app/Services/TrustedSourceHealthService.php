@@ -149,6 +149,7 @@ class TrustedSourceHealthService
     private function probeUrl(ContentSource $source): string
     {
         return match ($source->slug) {
+            'press-information-bureau' => (string) ($source->feed_url ?: $source->base_url),
             'upsc' => 'https://www.upsc.gov.in/examinations/active-exams',
             'ssc' => 'https://ssc.gov.in/',
             'nta' => 'https://nta.ac.in/',

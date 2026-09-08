@@ -15,7 +15,8 @@ class AutomaticTestGenerator
         Exam $exam,
         int $questionCount = 25,
         string $difficulty = 'mixed',
-        string $type = 'practice'
+        string $type = 'practice',
+        int $minPoolMultiple = 1
     ): Test {
         if ($questionCount < 1 || $questionCount > 500) {
             throw new RuntimeException(
@@ -34,6 +35,16 @@ class AutomaticTestGenerator
 
         if ($difficulty !== 'mixed') {
             $query->where('difficulty', $difficulty);
+        }
+
+        $eligibleCount = (clone $query)->count();
+        $requiredPool = $questionCount * max(1, $minPoolMultiple);
+
+        if ($eligibleCount < $requiredPool) {
+            throw new RuntimeException(
+                "Quality gate: only {$eligibleCount} eligible questions available; ".
+                "{$requiredPool} required for a {$minPoolMultiple}x diversity pool."
+            );
         }
 
         /*
@@ -87,7 +98,9 @@ class AutomaticTestGenerator
             $difficulty,
             $type,
             $typeLabel,
-            $typeLabelHi
+            $typeLabelHi,
+            $eligibleCount,
+            $minPoolMultiple
         ) {
             $series = TestSeries::firstOrCreate(
                 ['slug' => 'auto-'.$type.'-'.$exam->slug],
@@ -144,6 +157,8 @@ class AutomaticTestGenerator
                     'selection' => 'least_used_randomized',
                     'verified_only' => true,
                     'published_only' => true,
+                    'eligible_pool_size' => $eligibleCount,
+                    'minimum_pool_multiple' => $minPoolMultiple,
                     'generated_at' => now()->toIso8601String(),
                 ],
             ]);

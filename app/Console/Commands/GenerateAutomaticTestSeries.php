@@ -15,6 +15,7 @@ class GenerateAutomaticTestSeries extends Command
         {--questions=25 : Questions in each generated test}
         {--difficulty=mixed : easy, medium, hard, or mixed}
         {--type=practice : Generated test type}
+        {--min-pool-multiple=3 : Require this many eligible questions per requested question}
         {--max-per-exam=10 : Maximum active automatic tests of this type per exam}';
 
     protected $description = 'Generate fair-rotation tests for every active exam with enough questions';
@@ -24,6 +25,7 @@ class GenerateAutomaticTestSeries extends Command
         $perExam = max(1, (int) $this->option('per-exam'));
         $questions = max(1, (int) $this->option('questions'));
         $maxPerExam = max(1, (int) $this->option('max-per-exam'));
+        $minPoolMultiple = max(1, (int) $this->option('min-pool-multiple'));
         $type = (string) $this->option('type');
         $generated = 0;
         $skipped = 0;
@@ -37,6 +39,7 @@ class GenerateAutomaticTestSeries extends Command
                 $questions,
                 $maxPerExam,
                 $type,
+                $minPoolMultiple,
                 &$generated,
                 &$skipped
             ): void {
@@ -61,7 +64,8 @@ class GenerateAutomaticTestSeries extends Command
                             $exam,
                             $questions,
                             (string) $this->option('difficulty'),
-                            $type
+                            $type,
+                            $minPoolMultiple
                         );
                         $generated++;
                     } catch (RuntimeException $exception) {
