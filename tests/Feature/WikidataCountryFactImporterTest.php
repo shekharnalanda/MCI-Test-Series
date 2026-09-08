@@ -28,6 +28,8 @@ class WikidataCountryFactImporterTest extends TestCase
 
         $question = $questions->first();
         $this->assertNotEmpty($question->question_text_hi);
+        $this->assertStringContainsString('currency of Alpha', $question->explanation);
+        $this->assertStringContainsString('अल्फा की मुद्रा', $question->explanation_hi);
         $this->assertCount(4, $question->options);
         $this->assertCount(1, $question->options->where('is_correct', true));
         $this->assertTrue($question->is_verified);

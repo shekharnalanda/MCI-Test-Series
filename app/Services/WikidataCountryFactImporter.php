@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ContentSource;
+use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
 use Illuminate\Support\Collection;
@@ -28,8 +29,24 @@ class WikidataCountryFactImporter
             'reference' => 'wikidata-country-continent',
             'question_en' => 'On which continent is %s located?',
             'question_hi' => '%s किस महाद्वीप में स्थित है?',
-            'explanation_en' => '%s is located in %s.',
-            'explanation_hi' => '%s, %s में स्थित है।',
+            'explanation_en' => '%2$s is located in %1$s.',
+            'explanation_hi' => '%2$s, %1$s में स्थित है।',
+        ],
+        'official-language' => [
+            'property' => 'P37',
+            'reference' => 'wikidata-country-official-language',
+            'question_en' => 'What is the official language of %s?',
+            'question_hi' => '%s की आधिकारिक भाषा क्या है?',
+            'explanation_en' => '%s is an official language of %s.',
+            'explanation_hi' => '%s, %s की आधिकारिक भाषा है।',
+        ],
+        'india-state-capital' => [
+            'property' => 'P36',
+            'reference' => 'wikidata-india-state-capital',
+            'question_en' => 'What is the capital of %s?',
+            'question_hi' => '%s की राजधानी क्या है?',
+            'explanation_en' => '%s is the capital of %s.',
+            'explanation_hi' => '%s, %s की राजधानी है।',
         ],
     ];
 
@@ -41,7 +58,7 @@ class WikidataCountryFactImporter
 
     public function import(string $family, int $limit = 200, bool $dryRun = false): array
     {
-        $definition = self::FAMILIES[$family] ?? throw new InvalidArgumentException('Supported fact families: currency, continent.');
+        $definition = self::FAMILIES[$family] ?? throw new InvalidArgumentException('Supported fact families: currency, continent, official-language, india-state-capital.');
         $limit = max(10, min($limit, 500));
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
@@ -56,7 +73,7 @@ class WikidataCountryFactImporter
             ->timeout(45)
             ->retry(2, 750, throw: false)
             ->get(self::ENDPOINT, [
-                'query' => $this->query($definition['property'], $limit),
+                'query' => $this->query($family, $definition['property'], $limit),
                 'format' => 'json',
             ]);
 
@@ -101,8 +118,8 @@ class WikidataCountryFactImporter
             return [
                 'question_text' => sprintf($definition['question_en'], $fact['country_en']),
                 'question_text_hi' => sprintf($definition['question_hi'], $fact['country_hi']),
-                'explanation' => sprintf($definition['explanation_en'], $fact['country_en'], $fact['answer_en']),
-                'explanation_hi' => sprintf($definition['explanation_hi'], $fact['country_hi'], $fact['answer_hi']),
+                'explanation' => sprintf($definition['explanation_en'], $fact['answer_en'], $fact['country_en']),
+                'explanation_hi' => sprintf($definition['explanation_hi'], $fact['answer_hi'], $fact['country_hi']),
                 'subject_id' => $subject->id,
                 'topic_id' => $topic->id,
                 'exam_ids' => $examIds,
@@ -118,6 +135,16 @@ class WikidataCountryFactImporter
 
         if ($dryRun) {
             return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true];
+        }
+
+        // Refresh explanations for already imported facts as source facts are reprocessed.
+        foreach ($questions as $question) {
+            Question::where('source_reference', $question['source_reference'])
+                ->where('source_url', $question['source_url'])
+                ->update([
+                    'explanation' => $question['explanation'],
+                    'explanation_hi' => $question['explanation_hi'],
+                ]);
         }
 
         $batch = $this->ingestion->ingest($questions, $source, 'json');
@@ -145,11 +172,15 @@ class WikidataCountryFactImporter
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
-    private function query(string $property, int $limit): string
+    private function query(string $family, string $property, int $limit): string
     {
+        $entityPattern = $family === 'india-state-capital'
+            ? 'VALUES ?administrativeType { wd:Q12443800 wd:Q467745 }'.PHP_EOL.'  ?country wdt:P31 ?administrativeType;'
+            : '?country wdt:P31 wd:Q3624078;';
+
         return <<<SPARQL
 SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?answer ?answerLabelEn ?answerLabelHi WHERE {
-  ?country wdt:P31 wd:Q3624078;
+  {$entityPattern}
            wdt:{$property} ?answer;
            rdfs:label ?countryLabelEn;
            rdfs:label ?countryLabelHi.

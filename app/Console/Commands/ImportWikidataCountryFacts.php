@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 class ImportWikidataCountryFacts extends Command
 {
     protected $signature = 'mci:wikidata-country-facts
-        {--family=all : currency, continent, or all}
+        {--family=all : currency, continent, official-language, india-state-capital, or all}
         {--limit=300 : Maximum source rows per family (10-500)}
         {--dry-run : Fetch and validate without writing questions}';
 
@@ -17,7 +17,9 @@ class ImportWikidataCountryFacts extends Command
     public function handle(WikidataCountryFactImporter $importer): int
     {
         $family = (string) $this->option('family');
-        $families = $family === 'all' ? ['currency', 'continent'] : [$family];
+        $families = $family === 'all'
+            ? ['currency', 'continent', 'official-language', 'india-state-capital']
+            : [$family];
 
         foreach ($families as $current) {
             try {
