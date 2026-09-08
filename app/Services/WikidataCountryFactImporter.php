@@ -81,6 +81,36 @@ class WikidataCountryFactImporter
             'explanation_en' => '%s is the international calling code of %s.',
             'explanation_hi' => '%s, %s का अंतरराष्ट्रीय कॉलिंग कोड है।',
         ],
+        'iso-alpha-3-code' => [
+            'property' => 'P298',
+            'topic' => 'Countries Capitals Currencies',
+            'literal' => true,
+            'reference' => 'wikidata-country-iso-alpha-3-code',
+            'question_en' => 'What is the ISO alpha-3 code of %s?',
+            'question_hi' => '%s का ISO alpha-3 कोड क्या है?',
+            'explanation_en' => '%s is the ISO alpha-3 code of %s.',
+            'explanation_hi' => '%s, %s का ISO alpha-3 कोड है।',
+        ],
+        'iso-numeric-code' => [
+            'property' => 'P299',
+            'topic' => 'Countries Capitals Currencies',
+            'literal' => true,
+            'reference' => 'wikidata-country-iso-numeric-code',
+            'question_en' => 'What is the ISO numeric code of %s?',
+            'question_hi' => '%s का ISO संख्यात्मक कोड क्या है?',
+            'explanation_en' => '%s is the ISO numeric code of %s.',
+            'explanation_hi' => '%s, %s का ISO संख्यात्मक कोड है।',
+        ],
+        'internet-domain' => [
+            'property' => 'P78',
+            'topic' => 'Countries Capitals Currencies',
+            'literal' => true,
+            'reference' => 'wikidata-country-internet-domain',
+            'question_en' => 'What is the country-code top-level internet domain of %s?',
+            'question_hi' => '%s का country-code top-level internet domain क्या है?',
+            'explanation_en' => '%s is a country-code top-level internet domain of %s.',
+            'explanation_hi' => '%s, %s का country-code top-level internet domain है।',
+        ],
     ];
 
     public function __construct(

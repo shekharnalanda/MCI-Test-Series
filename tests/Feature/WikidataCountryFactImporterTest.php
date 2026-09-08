@@ -35,6 +35,22 @@ class WikidataCountryFactImporterTest extends TestCase
         $this->assertTrue($question->is_verified);
     }
 
+    public function test_it_imports_literal_country_identifier_facts(): void
+    {
+        $this->seed();
+        Http::fake([
+            'https://www.wikidata.org*' => Http::response('ok', 200),
+            'https://query.wikidata.org/*' => Http::response($this->response(), 200),
+        ]);
+
+        $this->artisan('mci:wikidata-country-facts --family=iso-alpha-3-code --limit=20')->assertSuccessful();
+
+        $questions = Question::where('source_reference', 'wikidata-country-iso-alpha-3-code')->get();
+        $this->assertCount(4, $questions);
+        $this->assertStringContainsString('ISO alpha-3 code', $questions->first()->question_text);
+        $this->assertNotEmpty($questions->first()->question_text_hi);
+    }
+
     private function response(): array
     {
         $facts = [
