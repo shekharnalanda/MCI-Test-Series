@@ -46,7 +46,7 @@ class WikidataAwardInceptionYearImporter
         }
 
         $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
-        $topic = Topic::where('subject_id', $subject->id)->where('name', 'Awards')->firstOrFail();
+        $topic = Topic::where('subject_id', $subject->id)->where('name', 'Awards and Honours')->firstOrFail();
         $examIds = $subject->exams()->where('is_active', true)->pluck('exams.id')->all();
         $questions = $facts->map(function (array $fact) use ($years, $subject, $topic, $examIds): array {
             $options = $years->reject(fn (array $candidate) => $candidate['year'] === $fact['year'])
