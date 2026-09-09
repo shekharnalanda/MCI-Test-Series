@@ -186,6 +186,11 @@ Schedule::command('mci:wikidata-software-programming-languages --limit=500')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
+Schedule::command('mci:wikidata-element-atomic-numbers --limit=250')
+    ->monthlyOn(17, '04:00')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(60);
+
 Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
     ->hourlyAt(35)
     ->withoutOverlapping(55)
