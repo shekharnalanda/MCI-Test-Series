@@ -161,6 +161,11 @@ Schedule::command('mci:wikidata-books --limit=500')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
+Schedule::command('mci:wikidata-organization-headquarters --limit=500')
+    ->monthlyOn(12, '04:00')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(60);
+
 Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
     ->hourlyAt(35)
     ->withoutOverlapping(55)
