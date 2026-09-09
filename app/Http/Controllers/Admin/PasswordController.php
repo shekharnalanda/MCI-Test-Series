@@ -26,6 +26,7 @@ class PasswordController extends Controller
         }
 
         $request->user()->forceFill(['password' => Hash::make($validated['password'])])->save();
+        $request->session()->regenerate();
         $request->session()->regenerateToken();
 
         return back()->with('success', 'Admin password changed successfully.');
