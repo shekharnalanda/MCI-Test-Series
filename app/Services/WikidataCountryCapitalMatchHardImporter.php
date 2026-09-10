@@ -31,21 +31,21 @@ class WikidataCountryCapitalMatchHardImporter
             throw new RuntimeException('Wikidata has not passed the trusted-source policy.');
         }
 
-        $response = Http::withHeaders(['Accept' => 'application/sparql-results+json'])
-            ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
-            ->timeout(45)->retry(2, 750, throw: false)
-            ->get(self::ENDPOINT, ['query' => $this->query(), 'format' => 'json']);
-
-        $facts = $response->successful()
-            ? collect($response->json('results.bindings', []))
-                ->map(fn (array $row) => $this->fact($row))->filter()
-                ->groupBy('country_id')
-                ->filter(fn (Collection $rows) => $rows->unique('capital_id')->count() === 1)
-                ->map(fn (Collection $rows) => $rows->first())->values()
-            : $this->factsFromQuestionBank($source->id);
+        $facts = $this->factsFromQuestionBank($source->id);
 
         if ($facts->count() < 8) {
-            $facts = $this->factsFromQuestionBank($source->id);
+            $response = Http::withHeaders(['Accept' => 'application/sparql-results+json'])
+                ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
+                ->timeout(45)->retry(2, 750, throw: false)
+                ->get(self::ENDPOINT, ['query' => $this->query(), 'format' => 'json']);
+
+            if ($response->successful()) {
+                $facts = collect($response->json('results.bindings', []))
+                    ->map(fn (array $row) => $this->fact($row))->filter()
+                    ->groupBy('country_id')
+                    ->filter(fn (Collection $rows) => $rows->unique('capital_id')->count() === 1)
+                    ->map(fn (Collection $rows) => $rows->first())->values();
+            }
         }
 
         if ($facts->count() < 8) {
