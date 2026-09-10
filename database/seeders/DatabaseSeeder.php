@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             ContentSourceSeeder::class,
             TopicTaxonomySeeder::class,
+            BiharLibrarianPrioritySeeder::class,
             DemoTestSeeder::class,
         ]);
     }
