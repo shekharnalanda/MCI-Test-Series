@@ -44,7 +44,7 @@ class QuestionBankPlanner
                              * copies of the same concept merely
                              * because multiple examinations use it.
                              */
-                            $existing = Question::query()
+                            $baseQuery = Question::query()
                                 ->where(
                                     'subject_id',
                                     $subject->id
@@ -53,6 +53,11 @@ class QuestionBankPlanner
                                     'is_active',
                                     true
                                 )
+                                ->where('is_published', true)
+                                ->where(
+                                    'verification_status',
+                                    'verified'
+                                )
                                 ->whereHas(
                                     'exams',
                                     fn ($q) =>
@@ -60,14 +65,31 @@ class QuestionBankPlanner
                                             'exams.id',
                                             $exam->id
                                         )
-                                )
-                                ->count();
+                                );
 
-                            $needed = max(
-                                0,
-                                $targetPerExamSubject
-                                    - $existing
-                            );
+                            $existingByDifficulty = (clone $baseQuery)
+                                ->selectRaw(
+                                    'difficulty, COUNT(*) AS aggregate'
+                                )
+                                ->groupBy('difficulty')
+                                ->pluck('aggregate', 'difficulty');
+
+                            $difficultyTargets = $this
+                                ->difficultyTargets($targetPerExamSubject);
+                            $difficultyDeficits = [];
+
+                            foreach ($difficultyTargets as $band => $target) {
+                                $difficultyDeficits[$band] = max(
+                                    0,
+                                    $target - (int) (
+                                        $existingByDifficulty[$band] ?? 0
+                                    )
+                                );
+                            }
+
+                            $existing = (int) $existingByDifficulty->sum();
+
+                            $needed = array_sum($difficultyDeficits);
 
                             $key =
                                 $exam->id.'|'.
@@ -147,6 +169,29 @@ class QuestionBankPlanner
                                             'required_questions' =>
                                                 $needed,
 
+                                            'difficulty_targets' =>
+                                                $difficultyTargets,
+
+                                            'existing_by_difficulty' => [
+                                                'easy' => (int) (
+                                                    $existingByDifficulty['easy'] ?? 0
+                                                ),
+                                                'medium' => (int) (
+                                                    $existingByDifficulty['medium'] ?? 0
+                                                ),
+                                                'hard' => (int) (
+                                                    $existingByDifficulty['hard'] ?? 0
+                                                ),
+                                            ],
+
+                                            'difficulty_deficits' =>
+                                                $difficultyDeficits,
+
+                                            'difficulty_priority' =>
+                                                $this->difficultyPriority(
+                                                    $difficultyDeficits
+                                                ),
+
                                             'multi_exam_reuse' =>
                                                 true,
 
@@ -155,37 +200,42 @@ class QuestionBankPlanner
 
                                             'verified_preferred' =>
                                                 true,
+
+                                            'verified_required' =>
+                                                true,
+
+                                            'published_required' =>
+                                                true,
                                         ],
                                     ]
                                 );
 
                             if (
-                                !in_array(
-                                    $job->status,
-                                    [
-                                        'processing',
-                                        'completed'
-                                    ],
-                                    true
-                                )
+                                $job->status !== 'processing'
                             ) {
                                 $retryState = [
-                    'status' => 'pending'
-                ];
+                                    'status' => 'pending'
+                                ];
 
-                if (in_array($job->status, ['partial', 'failed'], true)) {
-                    $retryState += [
-                        'generated_count' => 0,
-                        'accepted_count' => 0,
-                        'duplicate_count' => 0,
-                        'rejected_count' => 0,
-                        'started_at' => null,
-                        'completed_at' => null,
-                        'error_message' => null
-                    ];
-                }
+                                if (
+                                    in_array(
+                                        $job->status,
+                                        ['partial', 'failed', 'completed'],
+                                        true
+                                    )
+                                ) {
+                                    $retryState += [
+                                        'generated_count' => 0,
+                                        'accepted_count' => 0,
+                                        'duplicate_count' => 0,
+                                        'rejected_count' => 0,
+                                        'started_at' => null,
+                                        'completed_at' => null,
+                                        'error_message' => null
+                                    ];
+                                }
 
-                $job->update($retryState);
+                                $job->update($retryState);
                             }
 
                             $created++;
@@ -195,5 +245,29 @@ class QuestionBankPlanner
             );
 
         return $created;
+    }
+
+    private function difficultyTargets(int $total): array
+    {
+        $easy = (int) floor($total * 0.30);
+        $hard = (int) floor($total * 0.20);
+
+        return [
+            'easy' => $easy,
+            'medium' => $total - $easy - $hard,
+            'hard' => $hard,
+        ];
+    }
+
+    private function difficultyPriority(array $deficits): array
+    {
+        arsort($deficits);
+
+        return array_keys(
+            array_filter(
+                $deficits,
+                fn (int $count): bool => $count > 0
+            )
+        );
     }
 }

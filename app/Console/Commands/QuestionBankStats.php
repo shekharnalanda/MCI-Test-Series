@@ -67,6 +67,27 @@ class QuestionBankStats extends Command
                     )->count()
                 ],
                 [
+                    'Verified Easy',
+                    Question::where('verification_status', 'verified')
+                        ->where('is_published', true)
+                        ->where('difficulty', 'easy')
+                        ->count()
+                ],
+                [
+                    'Verified Medium',
+                    Question::where('verification_status', 'verified')
+                        ->where('is_published', true)
+                        ->where('difficulty', 'medium')
+                        ->count()
+                ],
+                [
+                    'Verified Hard',
+                    Question::where('verification_status', 'verified')
+                        ->where('is_published', true)
+                        ->where('difficulty', 'hard')
+                        ->count()
+                ],
+                [
                     'Current Affairs',
                     Question::where(
                         'is_current_affairs',

@@ -89,6 +89,33 @@ class LargeQuestionBankTest extends TestCase
             )
         );
 
+        $this->assertTrue(
+            (bool) data_get(
+                $job->generation_rules,
+                'verified_required'
+            )
+        );
+
+        $this->assertSame(
+            $job->target_count,
+            array_sum(
+                data_get(
+                    $job->generation_rules,
+                    'difficulty_deficits'
+                )
+            )
+        );
+
+        $this->assertSame(
+            10,
+            array_sum(
+                data_get(
+                    $job->generation_rules,
+                    'difficulty_targets'
+                )
+            )
+        );
+
         $job->update([
             'status' => 'failed',
             'generated_count' => 8,
