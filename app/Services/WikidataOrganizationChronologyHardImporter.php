@@ -78,11 +78,12 @@ class WikidataOrganizationChronologyHardImporter
     {
         $count = $facts->count();
 
-        return collect(range(0, $limit - 1))->map(function (int $index) use ($facts, $count) {
+        return collect(range(0, max($limit * 4, $limit - 1)))->map(function (int $index) use ($facts, $count) {
             return collect([$index, $index + 7, $index + 17, $index + 29])
                 ->map(fn (int $position) => $facts[$position % $count])->unique('entity_id')->values();
         })->filter(fn (Collection $group) => $group->count() === 4 && $group->unique('year')->count() === 4)
-            ->unique(fn (Collection $group) => $group->pluck('entity_id')->sort()->implode('|'))->values();
+            ->unique(fn (Collection $group) => $group->pluck('entity_id')->sort()->implode('|'))
+            ->take($limit)->values();
     }
 
     private function payload(Collection $group, int $subjectId, int $topicId, array $examIds): array
