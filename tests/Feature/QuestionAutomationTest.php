@@ -143,8 +143,14 @@ class QuestionAutomationTest extends TestCase
         $this->assertTrue($test->auto_generated);
         $this->assertEquals(5, $test->questions()->count());
         $this->assertEquals(
-            'least_used_randomized',
+            'least_used_topic_balanced',
             data_get($test->generation_rules, 'selection')
+        );
+        $this->assertTrue(
+            data_get($test->generation_rules, 'subject_alignment_required')
+        );
+        $this->assertTrue(
+            data_get($test->generation_rules, 'topic_balance_required')
         );
     }
 

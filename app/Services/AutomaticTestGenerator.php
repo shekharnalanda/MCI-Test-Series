@@ -6,6 +6,8 @@ use App\Models\Exam;
 use App\Models\Question;
 use App\Models\Test;
 use App\Models\TestSeries;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -31,6 +33,16 @@ class AutomaticTestGenerator
             ->whereHas(
                 'exams',
                 fn ($q) => $q->where('exams.id', $exam->id)
+            )
+            ->whereExists(function ($subjectMatch) use ($exam): void {
+                $subjectMatch
+                    ->selectRaw('1')
+                    ->from('exam_subject')
+                    ->whereColumn(
+                        'exam_subject.subject_id',
+                        'questions.subject_id'
+                    )
+                    ->where('exam_subject.exam_id', $exam->id);
             );
 
         if ($difficulty !== 'mixed') {
@@ -67,11 +79,10 @@ class AutomaticTestGenerator
             ? $unusedQuery
             : $query;
 
-        $questions = $selectionQuery
-            ->orderBy('usage_count')
-            ->inRandomOrder()
-            ->limit($questionCount)
-            ->get();
+        $questions = $this->selectTopicBalancedQuestions(
+            $selectionQuery,
+            $questionCount
+        );
 
         if ($questions->count() < $questionCount) {
             throw new RuntimeException(
@@ -154,9 +165,11 @@ class AutomaticTestGenerator
                 'generation_rules' => [
                     'difficulty' => $difficulty,
                     'question_count' => $questionCount,
-                    'selection' => 'least_used_randomized',
+                    'selection' => 'least_used_topic_balanced',
                     'verified_only' => true,
                     'published_only' => true,
+                    'subject_alignment_required' => true,
+                    'topic_balance_required' => true,
                     'eligible_pool_size' => $eligibleCount,
                     'minimum_pool_multiple' => $minPoolMultiple,
                     'generated_at' => now()->toIso8601String(),
@@ -183,5 +196,51 @@ class AutomaticTestGenerator
                 'series',
             ]);
         });
+    }
+
+    /**
+     * Keep the least-used rotation while distributing each test across as
+     * many available topics as possible. The larger candidate window avoids
+     * a single high-volume topic crowding out the rest of an exam syllabus.
+     */
+    private function selectTopicBalancedQuestions(
+        Builder $query,
+        int $questionCount
+    ): Collection {
+        $candidateLimit = max($questionCount, $questionCount * 4);
+
+        $buckets = (clone $query)
+            ->orderBy('usage_count')
+            ->inRandomOrder()
+            ->limit($candidateLimit)
+            ->get()
+            ->groupBy(fn (Question $question): string =>
+                (string) ($question->topic_id ?? 'unclassified')
+            )
+            ->map(fn (Collection $questions): Collection =>
+                $questions->values()
+            );
+
+        $selected = collect();
+
+        while ($selected->count() < $questionCount && $buckets->isNotEmpty()) {
+            foreach ($buckets->keys() as $key) {
+                if ($selected->count() >= $questionCount) {
+                    break;
+                }
+
+                $question = $buckets->get($key)?->shift();
+
+                if ($question) {
+                    $selected->push($question);
+                }
+
+                if ($buckets->get($key)?->isEmpty()) {
+                    $buckets->forget($key);
+                }
+            }
+        }
+
+        return $selected;
     }
 }
