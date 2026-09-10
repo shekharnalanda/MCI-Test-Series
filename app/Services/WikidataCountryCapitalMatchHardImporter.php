@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ContentSource;
+use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
 use Illuminate\Support\Collection;
@@ -35,15 +36,17 @@ class WikidataCountryCapitalMatchHardImporter
             ->timeout(45)->retry(2, 750, throw: false)
             ->get(self::ENDPOINT, ['query' => $this->query(), 'format' => 'json']);
 
-        if (! $response->successful()) {
-            throw new RuntimeException('Wikidata query failed with HTTP '.$response->status().'.');
-        }
+        $facts = $response->successful()
+            ? collect($response->json('results.bindings', []))
+                ->map(fn (array $row) => $this->fact($row))->filter()
+                ->groupBy('country_id')
+                ->filter(fn (Collection $rows) => $rows->unique('capital_id')->count() === 1)
+                ->map(fn (Collection $rows) => $rows->first())->values()
+            : $this->factsFromQuestionBank($source->id);
 
-        $facts = collect($response->json('results.bindings', []))
-            ->map(fn (array $row) => $this->fact($row))->filter()
-            ->groupBy('country_id')
-            ->filter(fn (Collection $rows) => $rows->unique('capital_id')->count() === 1)
-            ->map(fn (Collection $rows) => $rows->first())->values();
+        if ($facts->count() < 8) {
+            $facts = $this->factsFromQuestionBank($source->id);
+        }
 
         if ($facts->count() < 8) {
             throw new RuntimeException('At least eight unambiguous bilingual country-capital facts are required.');
@@ -93,7 +96,7 @@ class WikidataCountryCapitalMatchHardImporter
                 ];
             });
         });
-        $entities = $group->flatMap(fn (array $fact) => [$fact['country_id'], $fact['capital_id']])->unique()->sort();
+        $entities = $group->pluck('country_id')->unique()->sort();
         $explanationEn = $group->map(fn (array $fact) => $fact['country_en'].' — '.$fact['capital_en'])->implode('; ');
         $explanationHi = $group->map(fn (array $fact) => $fact['country_hi'].' — '.$fact['capital_hi'])->implode('; ');
 
@@ -136,6 +139,28 @@ class WikidataCountryCapitalMatchHardImporter
             'country_hi' => trim($countryHi), 'capital_en' => trim($capitalEn), 'capital_hi' => trim($capitalHi)];
     }
 
+    private function factsFromQuestionBank(int $sourceId): Collection
+    {
+        return Question::query()
+            ->where('content_source_id', $sourceId)
+            ->where('source_reference', 'wikidata-country-capital')
+            ->where('verification_status', 'verified')->where('is_published', true)->where('is_active', true)
+            ->with(['options' => fn ($query) => $query->where('is_correct', true)])
+            ->get()->map(function (Question $question) {
+                $answer = $question->options->first();
+
+                if (! $answer || ! preg_match('/^What is the capital of (.+)\?$/u', $question->question_text, $en)
+                    || ! preg_match('/^(.+) की राजधानी क्या है\?$/u', (string) $question->question_text_hi, $hi)
+                    || ! preg_match('~/entity/(Q\d+)$~', (string) $question->source_url, $country)) {
+                    return null;
+                }
+
+                return ['country_id' => $country[1], 'capital_id' => 'answer-'.$answer->id,
+                    'country_en' => trim($en[1]), 'country_hi' => trim($hi[1]),
+                    'capital_en' => $answer->option_text, 'capital_hi' => $answer->option_text_hi];
+            })->filter()->unique('country_id')->values();
+    }
+
     private function query(): string
     {
         return <<<'SPARQL'
@@ -148,6 +173,7 @@ SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?capital ?capitalLabelE
   FILTER(LANG(?capitalLabelEn) = "en" && LANG(?capitalLabelHi) = "hi")
 }
 ORDER BY ?countryLabelEn
+LIMIT 250
 SPARQL;
     }
 }
