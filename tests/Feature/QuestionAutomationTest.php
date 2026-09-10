@@ -10,6 +10,7 @@ use App\Services\AutomaticTestGenerator;
 use App\Services\QuestionIngestionService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use RuntimeException;
 use Tests\TestCase;
 
 class QuestionAutomationTest extends TestCase
@@ -188,5 +189,26 @@ class QuestionAutomationTest extends TestCase
         $this->assertStringContainsString('फुल मॉक टेस्ट', $test->title_hi);
         $this->assertSame('auto-full_mock-'.$exam->slug, $test->series->slug);
         $this->assertSame('full_mock', $test->series->series_type);
+    }
+
+    public function test_mixed_generation_enforces_difficulty_diversity_gate(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $exam = Exam::where(
+            'name',
+            'General Competitive Examination'
+        )->firstOrFail();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Difficulty gate:');
+
+        app(AutomaticTestGenerator::class)->generate(
+            $exam,
+            5,
+            'mixed',
+            'practice',
+            2
+        );
     }
 }

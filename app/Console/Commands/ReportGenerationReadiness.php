@@ -27,6 +27,9 @@ class ReportGenerationReadiness extends Command
         }
 
         $required = $questions * $multiple;
+        $difficultyRequired = collect(
+            $generator->difficultyTargets($questions)
+        )->map(fn (int $target): int => $target * $multiple);
         $rows = [];
         $ready = 0;
         $notReady = 0;
@@ -37,6 +40,7 @@ class ReportGenerationReadiness extends Command
             ->each(function (Exam $exam) use (
                 $generator,
                 $required,
+                $difficultyRequired,
                 &$rows,
                 &$ready,
                 &$notReady
@@ -51,7 +55,10 @@ class ReportGenerationReadiness extends Command
                     ->whereNotNull('topic_id')
                     ->distinct()
                     ->count('topic_id');
-                $isReady = $eligible >= $required;
+                $isReady = $eligible >= $required
+                    && (int) ($counts['easy'] ?? 0) >= $difficultyRequired['easy']
+                    && (int) ($counts['medium'] ?? 0) >= $difficultyRequired['medium']
+                    && (int) ($counts['hard'] ?? 0) >= $difficultyRequired['hard'];
 
                 $isReady ? $ready++ : $notReady++;
 
@@ -77,7 +84,10 @@ class ReportGenerationReadiness extends Command
         );
         $this->info(
             "Read-only audit: {$ready} ready; {$notReady} need content; " .
-            "quality gate requires {$required} eligible questions per exam."
+            "quality gate requires {$required} eligible questions per exam " .
+            "(easy {$difficultyRequired['easy']}, " .
+            "medium {$difficultyRequired['medium']}, " .
+            "hard {$difficultyRequired['hard']})."
         );
 
         return self::SUCCESS;

@@ -42,6 +42,22 @@ class AutomaticTestGenerator
             );
         }
 
+        if ($difficulty === 'mixed' && $minPoolMultiple > 1) {
+            foreach ($this->difficultyTargets($questionCount) as $band => $target) {
+                $available = (clone $query)
+                    ->where('difficulty', $band)
+                    ->count();
+                $required = $target * $minPoolMultiple;
+
+                if ($available < $required) {
+                    throw new RuntimeException(
+                        "Difficulty gate: {$band} has {$available} eligible questions; " .
+                        "{$required} required for balanced {$minPoolMultiple}x diversity."
+                    );
+                }
+            }
+        }
+
         /*
          * Lowest usage_count first prevents excessive repetition.
          * inRandomOrder() is Laravel database-driver aware:
@@ -214,6 +230,18 @@ class AutomaticTestGenerator
             });
     }
 
+    public function difficultyTargets(int $questionCount): array
+    {
+        $easyCount = (int) floor($questionCount * 0.30);
+        $hardCount = (int) floor($questionCount * 0.20);
+
+        return [
+            'easy' => $easyCount,
+            'medium' => $questionCount - $easyCount - $hardCount,
+            'hard' => $hardCount,
+        ];
+    }
+
     /**
      * Target a professional mixed-paper distribution of 30% easy, 50% medium
      * and 20% hard questions. Sparse pools safely fall back to the remaining
@@ -224,13 +252,7 @@ class AutomaticTestGenerator
         Builder $query,
         int $questionCount
     ): Collection {
-        $easyCount = (int) floor($questionCount * 0.30);
-        $hardCount = (int) floor($questionCount * 0.20);
-        $targets = [
-            'easy' => $easyCount,
-            'medium' => $questionCount - $easyCount - $hardCount,
-            'hard' => $hardCount,
-        ];
+        $targets = $this->difficultyTargets($questionCount);
 
         $selected = collect();
 
