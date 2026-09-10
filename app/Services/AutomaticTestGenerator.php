@@ -43,7 +43,7 @@ class AutomaticTestGenerator
                         'questions.subject_id'
                     )
                     ->where('exam_subject.exam_id', $exam->id);
-            );
+            });
 
         if ($difficulty !== 'mixed') {
             $query->where('difficulty', $difficulty);
