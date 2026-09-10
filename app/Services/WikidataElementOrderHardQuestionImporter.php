@@ -19,9 +19,12 @@ class WikidataElementOrderHardQuestionImporter
         private readonly TrustedSourceHealthService $health,
     ) {}
 
-    public function import(int $limit = 10, bool $dryRun = false): array
+    public function import(int $limit = 10, bool $dryRun = false, string $format = 'order'): array
     {
         $limit = max(1, min($limit, 25));
+        if (! in_array($format, ['order', 'range'], true)) {
+            throw new RuntimeException('Format must be order or range.');
+        }
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
         $source->refresh();
@@ -53,7 +56,7 @@ class WikidataElementOrderHardQuestionImporter
         $groups = $this->groups($facts, $limit);
 
         $questions = $groups->map(fn (Collection $group) => $this->payload(
-            $group, $subject->id, $topic->id, $examIds
+            $group, $subject->id, $topic->id, $examIds, $format
         ))->all();
 
         if ($dryRun) {
@@ -85,8 +88,18 @@ class WikidataElementOrderHardQuestionImporter
         )->values();
     }
 
-    private function payload(Collection $group, int $subjectId, int $topicId, array $examIds): array
+    private function payload(
+        Collection $group,
+        int $subjectId,
+        int $topicId,
+        array $examIds,
+        string $format
+    ): array
     {
+        if ($format === 'range') {
+            return $this->rangePayload($group, $subjectId, $topicId, $examIds);
+        }
+
         $ascending = $group->sortBy('atomic_number')->values();
         $orders = collect([
             $ascending,
@@ -116,6 +129,49 @@ class WikidataElementOrderHardQuestionImporter
                 'is_correct' => $index === 0,
             ])->all(),
         ];
+    }
+
+    private function rangePayload(Collection $group, int $subjectId, int $topicId, array $examIds): array
+    {
+        $ascending = $group->sortBy('atomic_number')->values();
+        $lowest = $ascending->first();
+        $highest = $ascending->last();
+        $range = $highest['atomic_number'] - $lowest['atomic_number'];
+        $namesEn = $group->pluck('name_en')->implode(', ');
+        $namesHi = $group->pluck('name_hi')->implode(', ');
+        $values = collect([$range, $range + 1, max(1, $range - 1), $range + 2])->unique()->values();
+
+        while ($values->count() < 4) {
+            $values->push($range + $values->count() + 2);
+        }
+
+        $values = $values->sortBy(fn (int $value) => hash('sha256', $namesEn.'|'.$value))->values();
+
+        return [
+            'question_text' => "Among {$namesEn}, what is the difference between the highest and lowest atomic numbers?",
+            'question_text_hi' => "{$namesHi} में सबसे बड़ी और सबसे छोटी परमाणु संख्याओं का अंतर कितना है?",
+            'explanation' => "{$highest['name_en']} has atomic number {$highest['atomic_number']} and {$lowest['name_en']} has {$lowest['atomic_number']}; therefore the difference is {$range}.",
+            'explanation_hi' => "{$highest['name_hi']} की परमाणु संख्या {$this->devanagariNumber($highest['atomic_number'])} और {$lowest['name_hi']} की {$this->devanagariNumber($lowest['atomic_number'])} है; अतः अंतर {$this->devanagariNumber($range)} है।",
+            'subject_id' => $subjectId, 'topic_id' => $topicId, 'exam_ids' => $examIds,
+            'difficulty' => 'hard', 'language' => 'bilingual',
+            'source_url' => 'https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&ids='.
+                $group->pluck('entity_id')->sort()->implode('%7C'),
+            'source_reference' => 'wikidata-element-range:'.$group->pluck('entity_id')->sort()->implode(','),
+            'source_published_at' => now()->toDateString(), 'generation_method' => 'automated',
+            'options' => $values->map(fn (int $value) => [
+                'option_text' => (string) $value,
+                'option_text_hi' => $this->devanagariNumber($value),
+                'is_correct' => $value === $range,
+            ])->all(),
+        ];
+    }
+
+    private function devanagariNumber(int $number): string
+    {
+        return strtr((string) $number, [
+            '0' => '०', '1' => '१', '2' => '२', '3' => '३', '4' => '४',
+            '5' => '५', '6' => '६', '7' => '७', '8' => '८', '9' => '९',
+        ]);
     }
 
     private function fact(array $row): ?array
