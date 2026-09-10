@@ -26,24 +26,7 @@ class AutomaticTestGenerator
             );
         }
 
-        $query = Question::query()
-            ->where('is_active', true)
-            ->where('is_published', true)
-            ->where('verification_status', 'verified')
-            ->whereHas(
-                'exams',
-                fn ($q) => $q->where('exams.id', $exam->id)
-            )
-            ->whereExists(function ($subjectMatch) use ($exam): void {
-                $subjectMatch
-                    ->selectRaw('1')
-                    ->from('exam_subject')
-                    ->whereColumn(
-                        'exam_subject.subject_id',
-                        'questions.subject_id'
-                    )
-                    ->where('exam_subject.exam_id', $exam->id);
-            });
+        $query = $this->eligibleQuery($exam);
 
         if ($difficulty !== 'mixed') {
             $query->where('difficulty', $difficulty);
@@ -79,10 +62,15 @@ class AutomaticTestGenerator
             ? $unusedQuery
             : $query;
 
-        $questions = $this->selectTopicBalancedQuestions(
-            $selectionQuery,
-            $questionCount
-        );
+        $questions = $difficulty === 'mixed'
+            ? $this->selectDifficultyAndTopicBalancedQuestions(
+                $selectionQuery,
+                $questionCount
+            )
+            : $this->selectTopicBalancedQuestions(
+                $selectionQuery,
+                $questionCount
+            );
 
         if ($questions->count() < $questionCount) {
             throw new RuntimeException(
@@ -166,6 +154,12 @@ class AutomaticTestGenerator
                     'difficulty' => $difficulty,
                     'question_count' => $questionCount,
                     'selection' => 'least_used_topic_balanced',
+                    'difficulty_balance' => $difficulty === 'mixed'
+                        ? ['easy' => 30, 'medium' => 50, 'hard' => 20]
+                        : [$difficulty => 100],
+                    'actual_difficulty_counts' => $questions
+                        ->countBy('difficulty')
+                        ->all(),
                     'verified_only' => true,
                     'published_only' => true,
                     'subject_alignment_required' => true,
@@ -196,6 +190,81 @@ class AutomaticTestGenerator
                 'series',
             ]);
         });
+    }
+
+    public function eligibleQuery(Exam $exam): Builder
+    {
+        return Question::query()
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->where('verification_status', 'verified')
+            ->whereHas(
+                'exams',
+                fn ($q) => $q->where('exams.id', $exam->id)
+            )
+            ->whereExists(function ($subjectMatch) use ($exam): void {
+                $subjectMatch
+                    ->selectRaw('1')
+                    ->from('exam_subject')
+                    ->whereColumn(
+                        'exam_subject.subject_id',
+                        'questions.subject_id'
+                    )
+                    ->where('exam_subject.exam_id', $exam->id);
+            });
+    }
+
+    /**
+     * Target a professional mixed-paper distribution of 30% easy, 50% medium
+     * and 20% hard questions. Sparse pools safely fall back to the remaining
+     * eligible questions, so a valid paper is never made incomplete merely
+     * because one difficulty band is temporarily under-supplied.
+     */
+    private function selectDifficultyAndTopicBalancedQuestions(
+        Builder $query,
+        int $questionCount
+    ): Collection {
+        $easyCount = (int) floor($questionCount * 0.30);
+        $hardCount = (int) floor($questionCount * 0.20);
+        $targets = [
+            'easy' => $easyCount,
+            'medium' => $questionCount - $easyCount - $hardCount,
+            'hard' => $hardCount,
+        ];
+
+        $selected = collect();
+
+        foreach ($targets as $difficulty => $target) {
+            if ($target === 0) {
+                continue;
+            }
+
+            $selected = $selected->concat(
+                $this->selectTopicBalancedQuestions(
+                    (clone $query)->where('difficulty', $difficulty),
+                    $target
+                )
+            );
+        }
+
+        $missing = $questionCount - $selected->count();
+
+        if ($missing > 0) {
+            $fallback = clone $query;
+
+            if ($selected->isNotEmpty()) {
+                $fallback->whereNotIn(
+                    'questions.id',
+                    $selected->pluck('id')->all()
+                );
+            }
+
+            $selected = $selected->concat(
+                $this->selectTopicBalancedQuestions($fallback, $missing)
+            );
+        }
+
+        return $selected->values();
     }
 
     /**

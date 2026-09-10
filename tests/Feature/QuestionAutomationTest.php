@@ -152,6 +152,19 @@ class QuestionAutomationTest extends TestCase
         $this->assertTrue(
             data_get($test->generation_rules, 'topic_balance_required')
         );
+        $this->assertSame(
+            ['easy' => 30, 'medium' => 50, 'hard' => 20],
+            data_get($test->generation_rules, 'difficulty_balance')
+        );
+        $this->assertSame(
+            5,
+            array_sum(
+                data_get(
+                    $test->generation_rules,
+                    'actual_difficulty_counts'
+                )
+            )
+        );
     }
 
     public function test_full_mock_uses_a_separate_series_and_correct_titles(): void
