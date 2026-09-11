@@ -40,7 +40,7 @@ class ExportQuestionGenerationBriefsTest extends TestCase
 
     public function test_it_rejects_invalid_options(): void
     {
-        $this->artisan('question-bark:export-briefs --difficulty=extreme')
+        $this->artisan('question-bank:export-briefs --difficulty=extreme')
             ->expectsOutputToContain('Difficulty must be')
             ->assertFailed();
 
