@@ -38,21 +38,17 @@ class ExportQuestionGenerationBriefsTest extends TestCase
             ],
         ]);
 
-        $before = QuestionGenerationJob::query()->get()->map(
-            fn (QuestionGenerationJob $job) => $job->only([
-                'id', 'status', 'generated_count', 'accepted_count', 'updated_at',
-            ])
-        )->toArray();
+        $before = QuestionGenerationJob::query()
+            ->get(['id', 'status', 'generated_count', 'accepted_count', 'updated_at'])
+            ->toJson();
 
         $this->artisan('question-bank:export-briefs --difficulty=hard --limit=2')
             ->expectsOutputToContain('"read_only": true')
             ->assertSuccessful();
 
-        $after = QuestionGenerationJob::query()->get()->map(
-            fn (QuestionGenerationJob $job) => $job->only([
-                'id', 'status', 'generated_count', 'accepted_count', 'updated_at',
-            ])
-        )->toArray();
+        $after = QuestionGenerationJob::query()
+            ->get(['id', 'status', 'generated_count', 'accepted_count', 'updated_at'])
+            ->toJson();
 
         $this->assertSame($before, $after);
     }
