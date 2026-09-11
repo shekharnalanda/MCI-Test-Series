@@ -7,6 +7,7 @@ use App\Models\Exam;
 use App\Models\ExamCategory;
 use App\Models\QuestionGenerationJob;
 use App\Models\Subject;
+use App\Services\QuestionGenerationJobImportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
