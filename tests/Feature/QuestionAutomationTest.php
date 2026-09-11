@@ -218,7 +218,7 @@ class QuestionAutomationTest extends TestCase
     {
         $source = ContentSource::where('slug', 'press-information-bureau')->firstOrFail();
         $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
-        $topic = Topic::where('subject_id', $subject->id)->where('is_active', true)->firstOrFail();
+        $topicModel = Topic::where('subject_id', $subject->id)->where('is_active', true)->firstOrFail();
         $difficulties = ['easy', 'easy', 'medium', 'medium', 'hard'];
         $topics = [
             'ocean geography and Pacific depth',
@@ -233,16 +233,16 @@ class QuestionAutomationTest extends TestCase
             'current affairs source verification',
         ];
 
-        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $topic, $difficulties, $topics): array {
-            $topic = $topics[($number - 1) % count($topics)];
+        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $topicModel, $difficulties, $topics): array {
+            $topicName = $topics[($number - 1) % count($topics)];
 
             return [
-                'question_text' => "Which verified fact best explains {$topic} in fixture {$number}?",
-                'question_text_hi' => "फिक्स्चर {$number} में {$topic} की सत्यापित व्याख्या कौन-सी है?",
-                'explanation' => "This fixture verifies {$topic}.",
-                'explanation_hi' => "यह फिक्स्चर {$topic} को सत्यापित करता है।",
+                'question_text' => "Which verified fact best explains {$topicName} in fixture {$number}?",
+                'question_text_hi' => "फिक्स्चर {$number} में {$topicName} की सत्यापित व्याख्या कौन-सी है?",
+                'explanation' => "This fixture verifies {$topicName}.",
+                'explanation_hi' => "यह फिक्स्चर {$topicName} को सत्यापित करता है।",
                 'subject_id' => $subject->id,
-                'topic_id' => $topic->id,
+                'topic_id' => $topicModel->id,
                 'exam_ids' => [$exam->id],
                 'difficulty' => $difficulties[($number - 1) % count($difficulties)],
                 'language' => 'bilingual',
