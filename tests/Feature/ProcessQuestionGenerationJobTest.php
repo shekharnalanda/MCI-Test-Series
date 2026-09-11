@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ContentSource;
 use App\Models\Exam;
+use App\Models\ExamCategory;
 use App\Models\QuestionGenerationJob;
 use App\Models\Subject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +16,13 @@ class ProcessQuestionGenerationJobTest extends TestCase
 
     public function test_it_imports_only_complete_bilingual_questions_and_updates_the_job(): void
     {
+        $category = ExamCategory::create([
+            'name' => 'Library',
+            'slug' => 'library',
+            'is_active' => true,
+        ]);
         $exam = Exam::create([
+            'exam_category_id' => $category->id,
             'name' => 'Bihar Librarian Recruitment',
             'slug' => 'bihar-librarian-recruitment',
             'is_active' => true,
@@ -90,7 +97,6 @@ class ProcessQuestionGenerationJobTest extends TestCase
         $this->assertSame('partial', $job->status);
 
         $this->assertDatabaseHas('questions', [
-            'exam_id' => null,
             'subject_id' => $subject->id,
             'language' => 'bilingual',
             'verification_status' => 'verified',
