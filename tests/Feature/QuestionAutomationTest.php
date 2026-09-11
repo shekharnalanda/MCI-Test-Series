@@ -200,6 +200,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
+        $this->seedEligibleQuestions($exam, 10);
+
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Difficulty gate:');
 
@@ -216,12 +218,26 @@ class QuestionAutomationTest extends TestCase
         $source = ContentSource::where('slug', 'press-information-bureau')->firstOrFail();
         $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
         $difficulties = ['easy', 'easy', 'medium', 'medium', 'hard'];
+        $topics = [
+            'ocean geography and Pacific depth',
+            'binary computing and digital logic',
+            'Indian constitutional history',
+            'planetary astronomy and Mars',
+            'library cataloguing classification',
+            'human biology and circulation',
+            'environmental science and forests',
+            'arithmetic ratios and proportion',
+            'Hindi grammar and vocabulary',
+            'current affairs source verification',
+        ];
 
-        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $difficulties): array {
+        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $difficulties, $topics): array {
+            $topic = $topics[($number - 1) % count($topics)];
+
             return [
-                'question_text' => "Verified automation fixture question {$number}?",
-                'question_text_hi' => "सत्यापित स्वचालन परीक्षण प्रश्न {$number}?",
-                'explanation' => "Verified explanation for fixture {$number}.",
+                'question_text' => "Which verified fact best explains {$topic} in fixture {$number}?",
+                'question_text_hi' => "फिक्स्चर {$number} में {$topic} की सत्यापित व्याख्या कौन-सी है?",
+                'explanation' => "This fixture verifies {$topic}.",
                 'subject_id' => $subject->id,
                 'exam_ids' => [$exam->id],
                 'difficulty' => $difficulties[($number - 1) % count($difficulties)],
