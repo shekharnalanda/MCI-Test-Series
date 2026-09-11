@@ -69,7 +69,7 @@ class QuestionGenerationJobImportService
             $item['topic_id'] = $item['topic_id'] ?? $job->topic_id;
             $item['exam_ids'] = [$job->exam_id];
             $item['language'] = 'bilingual';
-            $item['generation_method'] = 'generation_job_import';
+            $item['generation_method'] = 'ai_assisted';
 
             $prepared[] = $item;
         }
