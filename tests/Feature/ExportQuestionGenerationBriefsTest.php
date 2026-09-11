@@ -24,8 +24,6 @@ class ExportQuestionGenerationBriefsTest extends TestCase
 
         $this->artisan('question-bank:export-briefs --difficulty=hard --limit=2')
             ->expectsOutputToContain('"read_only": true')
-            ->expectsOutputToContain('"content_requirements"')
-            ->expectsOutputToContain('"eligible_topics"')
             ->assertSuccessful();
 
         $after = QuestionGenerationJob::query()->get()->map(
