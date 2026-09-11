@@ -128,10 +128,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
-        /*
-         * Demo seeder already provides 5 verified/published
-         * questions mapped to this exam.
-         */
+        $this->seedEligibleQuestions($exam);
+
         $generator = app(AutomaticTestGenerator::class);
 
         $test = $generator->generate(
@@ -177,6 +175,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
+        $this->seedEligibleQuestions($exam);
+
         $test = app(AutomaticTestGenerator::class)->generate(
             $exam,
             5,
@@ -211,4 +211,36 @@ class QuestionAutomationTest extends TestCase
             2
         );
     }
+    private function seedEligibleQuestions(Exam $exam, int $count = 5): void
+    {
+        $source = ContentSource::where('slug', 'press-information-bureau')->firstOrFail();
+        $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
+        $difficulties = ['easy', 'easy', 'medium', 'medium', 'hard'];
+
+        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $difficulties): array {
+            return [
+                'question_text' => "Verified automation fixture question {$number}?",
+                'question_text_hi' => "सत्यापित स्वचालन परीक्षण प्रश्न {$number}?",
+                'explanation' => "Verified explanation for fixture {$number}.",
+                'subject_id' => $subject->id,
+                'exam_ids' => [$exam->id],
+                'difficulty' => $difficulties[($number - 1) % count($difficulties)],
+                'language' => 'bilingual',
+                'source_url' => "https://pib.gov.in/fixture-{$number}",
+                'source_reference' => "PIB-FIXTURE-{$number}",
+                'source_published_at' => now()->subDay()->toDateString(),
+                'options' => [
+                    ['option_text' => "Correct {$number}", 'option_text_hi' => "सही {$number}", 'is_correct' => true],
+                    ['option_text' => "Wrong A {$number}", 'option_text_hi' => "गलत क {$number}", 'is_correct' => false],
+                    ['option_text' => "Wrong B {$number}", 'option_text_hi' => "गलत ख {$number}", 'is_correct' => false],
+                    ['option_text' => "Wrong C {$number}", 'option_text_hi' => "गलत ग {$number}", 'is_correct' => false],
+                ],
+            ];
+        })->all();
+
+        $batch = app(QuestionIngestionService::class)->ingest($items, $source, 'generated');
+
+        $this->assertSame($count, $batch->accepted_count);
+    }
+
 }
