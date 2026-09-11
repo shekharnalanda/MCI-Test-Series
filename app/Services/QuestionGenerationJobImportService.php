@@ -90,7 +90,7 @@ class QuestionGenerationJobImportService
                 $batch = $this->ingestion->ingest(
                     $chunk,
                     $source,
-                    'generation_job'
+                    'generated'
                 );
 
                 $accepted += (int) $batch->accepted_count;
