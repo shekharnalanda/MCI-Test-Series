@@ -80,11 +80,11 @@ class ProcessQuestionGenerationJobTest extends TestCase
         file_put_contents($path, json_encode([$valid, $invalid], JSON_UNESCAPED_UNICODE));
 
         try {
-            $this->artisan('question-bank:process-job', [
-                'job_code' => $job->job_code,
-                'file' => $path,
-                '--source' => $source->slug,
-            ])->assertSuccessful();
+            $result = app(QuestionGenerationJobImportService::class)
+                ->importJsonFile($job->job_code, $path, $source);
+
+            $this->assertSame(1, $result['accepted']);
+            $this->assertSame(1, $result['rejected']);
         } finally {
             @unlink($path);
         }
