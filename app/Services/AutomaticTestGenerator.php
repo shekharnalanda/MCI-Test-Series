@@ -198,7 +198,7 @@ class AutomaticTestGenerator
 
             $test->questions()->sync($sync);
 
-            Question::whereKey($questions->modelKeys())->increment("usage_count");
+            Question::whereKey($questions->pluck('id')->all())->increment('usage_count');
 
             return $test->fresh([
                 'questions',
@@ -258,80 +258,3 @@ class AutomaticTestGenerator
 
         foreach ($targets as $difficulty => $target) {
             if ($target === 0) {
-                continue;
-            }
-
-            $selected = $selected->concat(
-                $this->selectTopicBalancedQuestions(
-                    (clone $query)->where('difficulty', $difficulty),
-                    $target
-                )
-            );
-        }
-
-        $missing = $questionCount - $selected->count();
-
-        if ($missing > 0) {
-            $fallback = clone $query;
-
-            if ($selected->isNotEmpty()) {
-                $fallback->whereNotIn(
-                    'questions.id',
-                    $selected->pluck('id')->all()
-                );
-            }
-
-            $selected = $selected->concat(
-                $this->selectTopicBalancedQuestions($fallback, $missing)
-            );
-        }
-
-        return $selected->values();
-    }
-
-    /**
-     * Keep the least-used rotation while distributing each test across as
-     * many available topics as possible. The larger candidate window avoids
-     * a single high-volume topic crowding out the rest of an exam syllabus.
-     */
-    private function selectTopicBalancedQuestions(
-        Builder $query,
-        int $questionCount
-    ): Collection {
-        $candidateLimit = max($questionCount, $questionCount * 4);
-
-        $buckets = (clone $query)
-            ->orderBy('usage_count')
-            ->inRandomOrder()
-            ->limit($candidateLimit)
-            ->get()
-            ->groupBy(fn (Question $question): string =>
-                (string) ($question->topic_id ?? 'unclassified')
-            )
-            ->map(fn (Collection $questions): Collection =>
-                $questions->values()
-            );
-
-        $selected = collect();
-
-        while ($selected->count() < $questionCount && $buckets->isNotEmpty()) {
-            foreach ($buckets->keys() as $key) {
-                if ($selected->count() >= $questionCount) {
-                    break;
-                }
-
-                $question = $buckets->get($key)?->shift();
-
-                if ($question) {
-                    $selected->push($question);
-                }
-
-                if ($buckets->get($key)?->isEmpty()) {
-                    $buckets->forget($key);
-                }
-            }
-        }
-
-        return $selected;
-    }
-}
