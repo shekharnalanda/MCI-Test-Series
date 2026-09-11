@@ -198,7 +198,7 @@ class AutomaticTestGenerator
 
             $test->questions()->sync($sync);
 
-            Question::whereKey($questions->modelKeys())->increment("usage_count");
+            Question::whereKey($questions->pluck('id')->all())->increment('usage_count');
 
             return $test->fresh([
                 'questions',

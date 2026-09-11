@@ -6,6 +6,7 @@ use App\Models\ContentSource;
 use App\Models\Exam;
 use App\Models\Question;
 use App\Models\Subject;
+use App\Models\Topic;
 use App\Services\AutomaticTestGenerator;
 use App\Services\QuestionIngestionService;
 use Database\Seeders\DatabaseSeeder;
@@ -128,10 +129,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
-        /*
-         * Demo seeder already provides 5 verified/published
-         * questions mapped to this exam.
-         */
+        $this->seedEligibleQuestions($exam);
+
         $generator = app(AutomaticTestGenerator::class);
 
         $test = $generator->generate(
@@ -177,6 +176,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
+        $this->seedEligibleQuestions($exam);
+
         $test = app(AutomaticTestGenerator::class)->generate(
             $exam,
             5,
@@ -200,6 +201,8 @@ class QuestionAutomationTest extends TestCase
             'General Competitive Examination'
         )->firstOrFail();
 
+        $this->seedEligibleQuestions($exam, 11);
+
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Difficulty gate:');
 
@@ -211,4 +214,53 @@ class QuestionAutomationTest extends TestCase
             2
         );
     }
+    private function seedEligibleQuestions(Exam $exam, int $count = 6): void
+    {
+        $source = ContentSource::where('slug', 'press-information-bureau')->firstOrFail();
+        $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
+        $topicModel = Topic::where('subject_id', $subject->id)->where('is_active', true)->firstOrFail();
+        $difficulties = ['easy', 'easy', 'medium', 'medium', 'hard'];
+        $topics = [
+            'ocean geography and Pacific depth',
+            'binary computing and digital logic',
+            'Indian constitutional history',
+            'planetary astronomy and Mars',
+            'library cataloguing classification',
+            'human biology and circulation',
+            'environmental science and forests',
+            'arithmetic ratios and proportion',
+            'Hindi grammar and vocabulary',
+            'current affairs source verification',
+        ];
+
+        $items = collect(range(1, $count))->map(function (int $number) use ($exam, $subject, $topicModel, $difficulties, $topics): array {
+            $topicName = $topics[($number - 1) % count($topics)];
+
+            return [
+                'question_text' => "Which verified fact best explains {$topicName} in fixture {$number}?",
+                'question_text_hi' => "फिक्स्चर {$number} में {$topicName} की सत्यापित व्याख्या कौन-सी है?",
+                'explanation' => "This fixture verifies {$topicName}.",
+                'explanation_hi' => "यह फिक्स्चर {$topicName} को सत्यापित करता है।",
+                'subject_id' => $subject->id,
+                'topic_id' => $topicModel->id,
+                'exam_ids' => [$exam->id],
+                'difficulty' => $difficulties[($number - 1) % count($difficulties)],
+                'language' => 'bilingual',
+                'source_url' => "https://pib.gov.in/fixture-{$number}",
+                'source_reference' => "PIB-FIXTURE-{$number}",
+                'source_published_at' => now()->subDay()->toDateString(),
+                'options' => [
+                    ['option_text' => "Correct {$number}", 'option_text_hi' => "सही {$number}", 'is_correct' => true],
+                    ['option_text' => "Wrong A {$number}", 'option_text_hi' => "गलत क {$number}", 'is_correct' => false],
+                    ['option_text' => "Wrong B {$number}", 'option_text_hi' => "गलत ख {$number}", 'is_correct' => false],
+                    ['option_text' => "Wrong C {$number}", 'option_text_hi' => "गलत ग {$number}", 'is_correct' => false],
+                ],
+            ];
+        })->all();
+
+        $batch = app(QuestionIngestionService::class)->ingest($items, $source, 'generated');
+
+        $this->assertGreaterThanOrEqual($count - 1, $batch->accepted_count);
+    }
+
 }
