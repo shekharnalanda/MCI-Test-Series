@@ -12,11 +12,17 @@
 </p>
 </div>
 
+@php($chosenPackageId = old('package_id', $selectedPackage?->id))
+@if($selectedPackage)
+<div class="success"><strong>Selected Plan:</strong> {{ $selectedPackage->name }} — ₹{{ number_format((float) $selectedPackage->price, 0) }} • {{ $selectedPackage->test_limit }} Tests / {{ $selectedPackage->validity_days }} Days</div>
+@endif
+
 <div class="card">
 <h3>Step 1: Verify Email</h3>
 
 <form method="POST" action="{{ route('admission.send-otp') }}">
 @csrf
+<input type="hidden" name="package_id" value="{{ $chosenPackageId }}">
 <label>Email Address</label>
 <input type="email" name="email" value="{{ old('email') }}" required>
 <br><br>
@@ -27,6 +33,7 @@
 
 <form method="POST" action="{{ route('admission.verify-otp') }}">
 @csrf
+<input type="hidden" name="package_id" value="{{ $chosenPackageId }}">
 <label>Email Address</label>
 <input type="email" name="email" value="{{ old('email') }}" required>
 
@@ -48,6 +55,17 @@
 @csrf
 
 <div class="grid">
+
+<div>
+<label>Selected Plan *</label>
+<select name="package_id" required>
+<option value="">Select a Plan</option>
+@foreach($packages as $package)
+<option value="{{ $package->id }}" @selected((string) $chosenPackageId === (string) $package->id)>{{ $package->name }} — ₹{{ number_format((float) $package->price, 0) }} ({{ $package->test_limit }} Tests / {{ $package->validity_days }} Days)</option>
+@endforeach
+</select>
+<small><a href="{{ route('plans.index') }}">Compare all plans</a></small>
+</div>
 
 <div>
 <label>Student Name *</label>

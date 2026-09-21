@@ -3,15 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdmissionApplication;
+use App\Models\Package;
 use App\Services\EmailOtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class AdmissionController extends Controller
 {
-    public function create()
+    public function create(Request $request)
     {
-        return view('admission.create');
+        $packages = Package::query()
+            ->where('is_active', true)
+            ->whereIn('slug', ['abhyas-plan', 'taiyari-plan', 'safalta-plan', 'varshik-lakshya-plan'])
+            ->orderBy('price')
+            ->get();
+
+        $selectedPackage = $packages->firstWhere('slug', $request->query('package'));
+
+        return view('admission.create', compact('packages', 'selectedPackage'));
     }
 
     public function sendOtp(Request $request, EmailOtpService $otpService)
@@ -86,7 +95,17 @@ class AdmissionController extends Controller
                 'mimes:jpg,jpeg,png,webp',
                 'max:2048',
             ],
+            'package_id' => ['required', 'integer', 'exists:packages,id'],
         ]);
+
+        $package = Package::query()
+            ->whereKey($validated['package_id'])
+            ->where('is_active', true)
+            ->first();
+
+        if (! $package) {
+            return back()->withInput()->withErrors(['package_id' => 'Please select an active plan.']);
+        }
 
         if (session('admission_verified_email') !== $validated['email']) {
             return back()
@@ -116,6 +135,7 @@ class AdmissionController extends Controller
             'photo_path' => $photoPath,
             'email_verified_at' => now(),
             'status' => 'submitted',
+            'package_id' => $package->id,
         ]);
 
         session()->forget('admission_verified_email');
