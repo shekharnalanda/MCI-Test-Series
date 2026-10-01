@@ -22,7 +22,7 @@
 
 <br><br>
 <button type="submit">Login</button>
-</form>
+</form><p style="margin-top:16px"><a href="{{ route('mci.recovery') }}">Forgot password / login email or ID?</a></p>
 <p style="margin-top:18px"><a href="{{ route('admin.password.forgot') }}">Forgot Admin Password?</a></p>
 </div>
 @endsection

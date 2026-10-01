@@ -89,4 +89,5 @@ window.addEventListener('beforeinstallprompt', function (event) {
   }
 })();
 </script>
+@auth<p style="padding:12px;text-align:center"><a href="{{ route('mci.recovery.contact') }}">Recovery email settings</a></p>@endauth
 </body></html>
