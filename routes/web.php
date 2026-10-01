@@ -1,15 +1,22 @@
 <?php
 
+use App\Http\Controllers\Admin\AdmissionController as AdminAdmissionController;
+use App\Http\Controllers\Admin\ContentController;
+use App\Http\Controllers\Admin\CurrentAffairsController as AdminCurrentAffairsController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\OperationsController;
+use App\Http\Controllers\AdminPasswordResetController;
 use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DemoController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\PlanController;
-use App\Http\Controllers\Admin\AdmissionController as AdminAdmissionController;
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\CurrentAffairsController as AdminCurrentAffairsController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\TestController as StudentTestController;
 use Illuminate\Support\Facades\Route;
+
+require __DIR__.'/mci-account-recovery.php';
 
 Route::get('/', HomeController::class)->name('home');
 Route::get('/plans', PlanController::class)->name('plans.index');
@@ -40,13 +47,12 @@ Route::middleware('guest')->group(function () {
     )->name('admission.success');
 });
 
-
-Route::get('/free-demo', [\App\Http\Controllers\DemoController::class, 'create'])
+Route::get('/free-demo', [DemoController::class, 'create'])
     ->name('demo.create');
-Route::post('/free-demo/send-otp', [\App\Http\Controllers\DemoController::class, 'sendOtp'])
+Route::post('/free-demo/send-otp', [DemoController::class, 'sendOtp'])
     ->middleware('throttle:5,2')
     ->name('demo.send-otp');
-Route::post('/free-demo/verify-otp', [\App\Http\Controllers\DemoController::class, 'verifyOtp'])
+Route::post('/free-demo/verify-otp', [DemoController::class, 'verifyOtp'])
     ->middleware('throttle:10,10')
     ->name('demo.verify-otp');
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -128,50 +134,46 @@ Route::middleware(['auth', 'role:admin'])
         )->name('admissions.reject');
     });
 
-
 Route::middleware('auth')->group(function () {
-    Route::get('/account/password', [\App\Http\Controllers\PasswordController::class, 'edit'])
+    Route::get('/account/password', [PasswordController::class, 'edit'])
         ->name('password.edit');
-    Route::put('/account/password', [\App\Http\Controllers\PasswordController::class, 'update'])
+    Route::put('/account/password', [PasswordController::class, 'update'])
         ->name('password.update');
 });
 
-
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/operations', [\App\Http\Controllers\Admin\OperationsController::class, 'index'])->name('operations.index');
-    Route::post('/operations/students', [\App\Http\Controllers\Admin\OperationsController::class, 'storeStudent'])->name('operations.students.store');
-    Route::patch('/operations/students/{user}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleStudent'])->name('operations.students.toggle');
-    Route::post('/operations/students/{profile}/package', [\App\Http\Controllers\Admin\OperationsController::class, 'assignPackage'])->name('operations.students.package');
-    Route::post('/operations/packages', [\App\Http\Controllers\Admin\OperationsController::class, 'storePackage'])->name('operations.packages.store');
-    Route::put('/operations/packages/{package}', [\App\Http\Controllers\Admin\OperationsController::class, 'updatePackage'])->name('operations.packages.update');
-    Route::patch('/operations/packages/{package}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'togglePackage'])->name('operations.packages.toggle');
-    Route::post('/operations/exams', [\App\Http\Controllers\Admin\OperationsController::class, 'storeExam'])->name('operations.exams.store');
-    Route::patch('/operations/exams/{exam}/toggle', [\App\Http\Controllers\Admin\OperationsController::class, 'toggleExam'])->name('operations.exams.toggle');
+    Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
+    Route::post('/operations/students', [OperationsController::class, 'storeStudent'])->name('operations.students.store');
+    Route::patch('/operations/students/{user}/toggle', [OperationsController::class, 'toggleStudent'])->name('operations.students.toggle');
+    Route::post('/operations/students/{profile}/package', [OperationsController::class, 'assignPackage'])->name('operations.students.package');
+    Route::post('/operations/packages', [OperationsController::class, 'storePackage'])->name('operations.packages.store');
+    Route::put('/operations/packages/{package}', [OperationsController::class, 'updatePackage'])->name('operations.packages.update');
+    Route::patch('/operations/packages/{package}/toggle', [OperationsController::class, 'togglePackage'])->name('operations.packages.toggle');
+    Route::post('/operations/exams', [OperationsController::class, 'storeExam'])->name('operations.exams.store');
+    Route::patch('/operations/exams/{exam}/toggle', [OperationsController::class, 'toggleExam'])->name('operations.exams.toggle');
 });
 
-
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/content', [\App\Http\Controllers\Admin\ContentController::class, 'index'])->name('content.index');
-    Route::post('/content/subjects', [\App\Http\Controllers\Admin\ContentController::class, 'storeSubject'])->name('content.subjects.store');
-    Route::post('/content/topics', [\App\Http\Controllers\Admin\ContentController::class, 'storeTopic'])->name('content.topics.store');
-    Route::post('/content/questions', [\App\Http\Controllers\Admin\ContentController::class, 'storeQuestion'])->name('content.questions.store');
-    Route::post('/content/generate', [\App\Http\Controllers\Admin\ContentController::class, 'generate'])->name('content.generate');
-    Route::patch('/content/tests/{test}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleTest'])->name('content.tests.toggle');
-    Route::put('/content/tests/{test}/answer-visibility', [\App\Http\Controllers\Admin\ContentController::class, 'updateAnswerVisibility'])->name('content.tests.answer-visibility');
-    Route::patch('/content/series/{series}/toggle', [\App\Http\Controllers\Admin\ContentController::class, 'toggleSeries'])->name('content.series.toggle');
+    Route::get('/content', [ContentController::class, 'index'])->name('content.index');
+    Route::post('/content/subjects', [ContentController::class, 'storeSubject'])->name('content.subjects.store');
+    Route::post('/content/topics', [ContentController::class, 'storeTopic'])->name('content.topics.store');
+    Route::post('/content/questions', [ContentController::class, 'storeQuestion'])->name('content.questions.store');
+    Route::post('/content/generate', [ContentController::class, 'generate'])->name('content.generate');
+    Route::patch('/content/tests/{test}/toggle', [ContentController::class, 'toggleTest'])->name('content.tests.toggle');
+    Route::put('/content/tests/{test}/answer-visibility', [ContentController::class, 'updateAnswerVisibility'])->name('content.tests.answer-visibility');
+    Route::patch('/content/series/{series}/toggle', [ContentController::class, 'toggleSeries'])->name('content.series.toggle');
 });
-
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/change-password', [\App\Http\Controllers\Admin\PasswordController::class, 'edit'])
+    Route::get('/admin/change-password', [App\Http\Controllers\Admin\PasswordController::class, 'edit'])
         ->name('admin.password.edit');
-    Route::put('/admin/change-password', [\App\Http\Controllers\Admin\PasswordController::class, 'update'])
+    Route::put('/admin/change-password', [App\Http\Controllers\Admin\PasswordController::class, 'update'])
         ->name('admin.password.update');
 });
 
 Route::middleware('guest')->group(function () {
-    Route::get('/admin/forgot-password', [\App\Http\Controllers\AdminPasswordResetController::class, 'create'])->name('admin.password.forgot');
-    Route::post('/admin/forgot-password/send-otp', [\App\Http\Controllers\AdminPasswordResetController::class, 'sendOtp'])->middleware('throttle:3,10')->name('admin.password.forgot.send');
-    Route::post('/admin/forgot-password/verify-otp', [\App\Http\Controllers\AdminPasswordResetController::class, 'verifyOtp'])->middleware('throttle:10,10')->name('admin.password.forgot.verify');
-    Route::put('/admin/forgot-password/reset', [\App\Http\Controllers\AdminPasswordResetController::class, 'reset'])->middleware('throttle:5,10')->name('admin.password.forgot.reset');
+    Route::get('/admin/forgot-password', [AdminPasswordResetController::class, 'create'])->name('admin.password.forgot');
+    Route::post('/admin/forgot-password/send-otp', [AdminPasswordResetController::class, 'sendOtp'])->middleware('throttle:3,10')->name('admin.password.forgot.send');
+    Route::post('/admin/forgot-password/verify-otp', [AdminPasswordResetController::class, 'verifyOtp'])->middleware('throttle:10,10')->name('admin.password.forgot.verify');
+    Route::put('/admin/forgot-password/reset', [AdminPasswordResetController::class, 'reset'])->middleware('throttle:5,10')->name('admin.password.forgot.reset');
 });
