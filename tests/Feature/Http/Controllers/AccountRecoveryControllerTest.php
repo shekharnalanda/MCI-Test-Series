@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Http\Controllers;
 
-use App\Mail\AccountRecoveryCode;
 use App\Models\User;
+use App\Mail\AccountRecoveryCode;
 use App\Services\AccountRecoveryOtp;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -127,6 +128,68 @@ class AccountRecoveryControllerTest extends TestCase
     {
         $this->withSession(['recovered_identifiers' => ['<script>alert(1)</script>']])
             ->get('/account-recovery')->assertSee('&lt;script&gt;', false)->assertDontSee('<script>alert(1)</script>', false);
+    }
+
+    public function test_repeated_send_keeps_the_usable_code_and_does_not_reveal_registration(): void
+    {
+        Mail::fake();
+        config(['mail.default' => 'smtp']);
+        $user = User::factory()->create();
+        $this->app['session']->start();
+        $sessionId = $this->app['session']->getId();
+        $status = 'If this email is eligible, a recovery code has been sent. Check your inbox and spam folder.';
+        $pendingId = null;
+
+        $this->withCookie(config('session.cookie'), $sessionId)
+            ->post('/account-recovery/send', ['email' => $user->email, 'purpose' => 'password'])
+            ->assertSessionHasNoErrors()->assertSessionHas('status', $status)
+            ->assertSessionHas('mci_recovery_pending', function (array $pending) use (&$pendingId): bool {
+                $pendingId = $pending['id'];
+                return $pending['purpose'] === 'password';
+            });
+
+        $this->withCookie(config('session.cookie'), $sessionId)
+            ->post('/account-recovery/send', ['email' => $user->email, 'purpose' => 'password'])
+            ->assertSessionHasNoErrors()->assertSessionHas('status', $status)
+            ->assertSessionHas('mci_recovery_pending.id', $pendingId);
+
+        $this->post('/account-recovery/send', ['email' => 'unknown@example.com', 'purpose' => 'password'])
+            ->assertSessionHasNoErrors()->assertSessionHas('status', $status);
+        Mail::assertSentCount(1);
+        $this->assertDatabaseHas('mci_recovery_challenges', ['id' => $pendingId, 'consumed_at' => null]);
+    }
+
+    public function test_transport_failure_has_the_same_public_response_as_an_unknown_email(): void
+    {
+        config(['mail.default' => 'smtp']);
+        $user = User::factory()->create();
+        $pendingMail = \Mockery::mock(\Illuminate\Mail\PendingMail::class);
+        $pendingMail->shouldReceive('send')->once()->andThrow(new \RuntimeException('Test transport unavailable'));
+        Mail::shouldReceive('to')->once()->with($user->email)->andReturn($pendingMail);
+        $status = 'If this email is eligible, a recovery code has been sent. Check your inbox and spam folder.';
+
+        foreach ([$user->email, 'unknown@example.com'] as $email) {
+            $this->post('/account-recovery/send', ['email' => $email, 'purpose' => 'password'])
+                ->assertSessionHasNoErrors()->assertSessionHas('status', $status)
+                ->assertSessionHas('mci_recovery_pending.id');
+        }
+        $this->assertDatabaseCount('mci_recovery_challenges', 1);
+        $this->assertNotNull(DB::table('mci_recovery_challenges')->first()->consumed_at);
+    }
+
+    public function test_unconfigured_mail_has_the_same_public_response_for_known_and_unknown_email(): void
+    {
+        Mail::fake();
+        config(['mail.default' => 'log']);
+        $user = User::factory()->create();
+        $status = 'If this email is eligible, a recovery code has been sent. Check your inbox and spam folder.';
+        foreach ([$user->email, 'unknown@example.com'] as $email) {
+            $this->post('/account-recovery/send', ['email' => $email, 'purpose' => 'password'])
+                ->assertSessionHasNoErrors()->assertSessionHas('status', $status)
+                ->assertSessionHas('mci_recovery_pending.id');
+        }
+        Mail::assertNothingSent();
+        $this->assertDatabaseCount('mci_recovery_challenges', 0);
     }
 
     private function passwordChallenge(User $user): array
