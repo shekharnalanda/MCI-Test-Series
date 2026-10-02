@@ -21,7 +21,12 @@ class LibraryPracticeController extends Controller
     {
         $data = $request->validate(['ticket' => ['required', 'string', 'size:64']]);
         try {
-            $account = $service->linkIdentity($bridge->consume($data['ticket']), $bridge);
+            $identity = $bridge->consume($data['ticket']);
+            $practiceToken = $request->session()->get('library_practice_session_token') ?: bin2hex(random_bytes(32));
+            $bridge->claimPractice($identity, $identity->device_hash, $practiceToken);
+            $account = $service->linkIdentity($identity, $bridge);
+            $request->session()->put('library_practice_device_hash', $identity->device_hash);
+            $request->session()->put('library_practice_session_token', $practiceToken);
         } catch (\RuntimeException $e) {
             abort(403, 'Practice login expired or membership is inactive. Open it again from your library panel.');
         }
@@ -56,8 +61,9 @@ class LibraryPracticeController extends Controller
             ->when($filters['exam'] ?? null, fn ($q, $id) => $q->where('exam_id', $id))
             ->when($filters['q'] ?? null, fn ($q, $text) => $q->where('title', 'like', '%'.$text.'%'))
             ->latest('id')->paginate(20)->withQueryString();
-        $categories = ExamCategory::whereHas('exams.tests', $available)->orderBy('name')->get();
-        $exams = Exam::whereHas('tests', $available)->orderBy('name')->get();
+        $examIds = Test::query()->tap($available)->whereNotNull('exam_id')->distinct()->pluck('exam_id');
+        $exams = Exam::whereIn('id', $examIds)->orderBy('name')->get();
+        $categories = ExamCategory::whereIn('id', $exams->pluck('exam_category_id')->filter()->unique())->orderBy('name')->get();
         $selections = DB::table('library_practice_selections')->where('library_practice_month_id', $month->id)->get()->keyBy('test_id');
         $selectedTests = Test::with('exam')->whereIn('id', $selections->keys())->get();
         $attempts = TestAttempt::with('test')->where('student_profile_id', $account->student_profile_id)
@@ -155,9 +161,14 @@ class LibraryPracticeController extends Controller
         return view('library-practice.result', compact('attempt', 'canReviewAnswers'));
     }
 
-    public function logout(Request $request): RedirectResponse
+    public function logout(Request $request, LibraryPracticeBridge $bridge): RedirectResponse
     {
-        $request->session()->forget('library_practice_account_id');
+        $a = $this->account($request);
+        $identity = $bridge->identity((int) $a->library_student_id, $a->student_code, (int) $a->library_user_id);
+        if ($identity) {
+            $bridge->closePractice($identity, (string) $request->session()->get('library_practice_device_hash'), (string) $request->session()->get('library_practice_session_token'));
+        }
+        $request->session()->forget(['library_practice_account_id', 'library_practice_device_hash', 'library_practice_session_token']);
         $request->session()->regenerate();
         $request->session()->regenerateToken();
 
