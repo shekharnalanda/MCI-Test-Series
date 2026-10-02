@@ -1,0 +1,5 @@
+@extends('layouts.app')
+@section('title','Library Practice Report')
+@section('content')
+<div class="card"><h1>Library Free Practice Report</h1><p>Monthly limit: 10 complete sets · Fee ₹0 · C-Net and MCI campus students</p><form method="GET"><label>Month</label><input type="month" name="month" value="{{ $period }}"><button>View Report</button></form></div><div class="card" style="overflow:auto"><table><thead><tr><th>Student</th><th>Library ID</th><th>Campus ID</th><th>Month</th><th>Selected</th><th>Started</th><th>Completed</th></tr></thead><tbody>@forelse($rows as $row)<tr><td>{{ $row->student_name }}</td><td>{{ $row->student_code }}</td><td>{{ $row->branch_id }}</td><td>{{ $row->period }}</td><td>{{ $row->selected_count }}</td><td>{{ $row->started_count }}</td><td>{{ $row->completed_count }}</td></tr>@empty<tr><td colspan="7">No library practice recorded for this month.</td></tr>@endforelse</tbody></table>{{ $rows->links() }}</div><a class="btn" href="{{ route('admin.dashboard') }}">Admin Dashboard</a>
+@endsection

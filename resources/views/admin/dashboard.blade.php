@@ -4,6 +4,7 @@
 
 @section('content')
 <h1>Admin Dashboard</h1>
+<a class="btn" href="{{ route('admin.library-practice') }}">Library Free Practice Report</a>
 
 <div class="grid">
 <div class="card"><h2>{{ $students }}</h2><p>Students</p></div>
