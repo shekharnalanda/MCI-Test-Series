@@ -59,6 +59,8 @@ class LibraryPracticeService
         $identity = $bridge->identity((int) $account->library_student_id, $account->student_code, (int) $account->library_user_id);
         abort_unless($identity, 403, 'Library account is inactive.');
 
+        abort_unless($bridge->touchPractice($identity, (string) $request->session()->get('library_practice_device_hash'), (string) $request->session()->get('library_practice_session_token')), 403, 'Your library session expired or was closed. Open practice again from your library panel.');
+
         return $account;
     }
 

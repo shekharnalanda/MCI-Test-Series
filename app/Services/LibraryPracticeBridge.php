@@ -36,7 +36,7 @@ class LibraryPracticeBridge
         }
         $db = DB::connection($name);
 
-        // Only read the library connection; never update another site's tables.
+        // Identity, membership and payment tables remain read-only.
         return $db->table('students as s')->join('users as u', 'u.id', '=', 's.user_id')
             ->where('s.id', $id)->where('s.student_code', $code)->where('u.id', $userId)
             ->where('s.status', 'active')->where('u.role', 'student')->where('u.status', true)
@@ -70,10 +70,56 @@ class LibraryPracticeBridge
         return false;
     }
 
-    public function issue(object $identity): string
+    public function activeDevice(object $identity, string $hash): bool
+    {
+        if (! preg_match('/^[a-f0-9]{64}$/', $hash)) {
+            return false;
+        }
+
+        return DB::connection('library_practice_source')->table('library_student_sessions')->where('student_id', $identity->id)->where('token_hash', $hash)->where('expires_at', '>', now())->exists();
+    }
+
+    public function claimPractice(object $identity, string $deviceHash, string $sessionToken): void
+    {
+        $db = DB::connection('library_practice_source');
+        $db->transaction(function () use ($db, $identity, $deviceHash, $sessionToken) {
+            $row = $db->table('library_student_sessions')->where('student_id', $identity->id)->lockForUpdate()->first();
+            $hash = hash('sha256', $sessionToken);
+            if (! $row || ! hash_equals($row->token_hash, $deviceHash) || $row->expires_at <= now()->format('Y-m-d H:i:s')) {
+                throw new RuntimeException('Library login is no longer active.');
+            }
+            if ($row->practice_session_hash && $row->practice_expires_at > now()->format('Y-m-d H:i:s') && ! hash_equals($row->practice_session_hash, $hash)) {
+                throw new RuntimeException('Practice is already open in another browser.');
+            }
+            $db->table('library_student_sessions')->where('student_id', $identity->id)->update(['practice_session_hash' => $hash, 'practice_expires_at' => now()->addMinutes(120), 'expires_at' => now()->addMinutes(120), 'last_seen_at' => now(), 'updated_at' => now()]);
+        }, 3);
+    }
+
+    public function touchPractice(object $identity, string $deviceHash, string $sessionToken): bool
+    {
+        if (! preg_match('/^[a-f0-9]{64}$/', $deviceHash) || ! preg_match('/^[a-f0-9]{64}$/', $sessionToken)) {
+            return false;
+        }
+
+        $query = DB::connection('library_practice_source')->table('library_student_sessions')->where('student_id', $identity->id)->where('token_hash', $deviceHash)->where('practice_session_hash', hash('sha256', $sessionToken))->where('expires_at', '>', now())->where('practice_expires_at', '>', now());
+        $updated = (clone $query)->update(['last_seen_at' => now(), 'expires_at' => now()->addMinutes(120), 'practice_expires_at' => now()->addMinutes(120), 'updated_at' => now()]);
+
+        // A same-second MySQL update may match an active session without changing it.
+        return $updated === 1 || $query->exists();
+    }
+
+    public function closePractice(object $identity, string $deviceHash, string $sessionToken): void
+    {
+        DB::connection('library_practice_source')->table('library_student_sessions')->where('student_id', $identity->id)->where('token_hash', $deviceHash)->where('practice_session_hash', hash('sha256', $sessionToken))->update(['practice_session_hash' => null, 'practice_expires_at' => null, 'updated_at' => now()]);
+    }
+
+    public function issue(object $identity, ?string $deviceHash = null): string
     {
         if (! $this->eligible($identity)) {
             throw new RuntimeException('An active library membership is required for free practice.');
+        }
+        if (! $deviceHash || ! $this->activeDevice($identity, $deviceHash)) {
+            throw new RuntimeException('An active single-device library login is required.');
         }
         $config = $this->configuration();
         $dir = dirname(config('library-practice.bridge_path')).'/tickets';
@@ -84,7 +130,7 @@ class LibraryPracticeBridge
         $payload = json_encode([
             'bridge_id' => $config['bridge_id'], 'student_id' => (int) $identity->id,
             'student_code' => $identity->student_code, 'user_id' => (int) $identity->user_id,
-            'issued_at' => now()->getTimestamp(), 'audience' => 'mci-library-practice',
+            'device_hash' => $deviceHash, 'issued_at' => now()->getTimestamp(), 'audience' => 'mci-library-practice',
         ], JSON_THROW_ON_ERROR);
         $data = json_encode(['payload' => $payload, 'mac' => hash_hmac('sha256', $payload, $config['secret'])], JSON_THROW_ON_ERROR);
         $path = $dir.'/'.hash('sha256', $token).'.json';
@@ -140,6 +186,12 @@ class LibraryPracticeBridge
             if (! $identity || ! $this->eligible($identity)) {
                 throw new RuntimeException('Your library membership is not active.');
             }
+
+            $hash = (string) ($data['device_hash'] ?? '');
+            if (! $this->activeDevice($identity, $hash)) {
+                throw new RuntimeException('Library login is no longer active.');
+            }
+            $identity->device_hash = $hash;
 
             return $identity;
         } finally {

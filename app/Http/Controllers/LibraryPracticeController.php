@@ -21,7 +21,12 @@ class LibraryPracticeController extends Controller
     {
         $data = $request->validate(['ticket' => ['required', 'string', 'size:64']]);
         try {
-            $account = $service->linkIdentity($bridge->consume($data['ticket']), $bridge);
+            $identity = $bridge->consume($data['ticket']);
+            $practiceToken = $request->session()->get('library_practice_session_token') ?: bin2hex(random_bytes(32));
+            $bridge->claimPractice($identity, $identity->device_hash, $practiceToken);
+            $account = $service->linkIdentity($identity, $bridge);
+            $request->session()->put('library_practice_device_hash', $identity->device_hash);
+            $request->session()->put('library_practice_session_token', $practiceToken);
         } catch (\RuntimeException $e) {
             abort(403, 'Practice login expired or membership is inactive. Open it again from your library panel.');
         }
@@ -155,9 +160,14 @@ class LibraryPracticeController extends Controller
         return view('library-practice.result', compact('attempt', 'canReviewAnswers'));
     }
 
-    public function logout(Request $request): RedirectResponse
+    public function logout(Request $request, LibraryPracticeBridge $bridge): RedirectResponse
     {
-        $request->session()->forget('library_practice_account_id');
+        $a = $this->account($request);
+        $identity = $bridge->identity((int) $a->library_student_id, $a->student_code, (int) $a->library_user_id);
+        if ($identity) {
+            $bridge->closePractice($identity, (string) $request->session()->get('library_practice_device_hash'), (string) $request->session()->get('library_practice_session_token'));
+        }
+        $request->session()->forget(['library_practice_account_id', 'library_practice_device_hash', 'library_practice_session_token']);
         $request->session()->regenerate();
         $request->session()->regenerateToken();
 
