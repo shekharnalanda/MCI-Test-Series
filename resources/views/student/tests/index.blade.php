@@ -21,13 +21,7 @@
 <div class="error">No active test package is assigned to this account. Please contact MCI administration.</div>
 @endif
 <div class="test-toolbar">
-<form method="GET" action="{{ route('student.tests.index') }}">
-<div><label for="q">Search Test</label><input id="q" type="search" name="q" value="{{ $filters['q'] ?? '' }}" placeholder="Test or exam name"></div>
-<div><label for="category">Category</label><select id="category" name="category"><option value="">All Categories</option>@foreach($categories as $category)<option value="{{ $category->id }}" @selected((string)($filters['category'] ?? '') === (string)$category->id)>{{ $category->name }}</option>@endforeach</select></div>
-<div><label for="exam">Exam</label><select id="exam" name="exam"><option value="">All Exams</option>@foreach($exams as $exam)<option value="{{ $exam->id }}" @selected((string)($filters['exam'] ?? '') === (string)$exam->id)>{{ $exam->name }}</option>@endforeach</select></div>
-<div><label for="type">Test Type</label><select id="type" name="type"><option value="">All Types</option>@foreach($testTypes as $type)<option value="{{ $type }}" @selected(($filters['type'] ?? '') === $type)>{{ ucwords(str_replace('_',' ',$type)) }}</option>@endforeach</select></div>
-<button type="submit">Apply Filters</button><a class="clear-filter" href="{{ route('student.tests.index') }}">Clear</a>
-</form>
+@include('layouts.test-catalog-filters', ['catalogRoute' => route('student.tests.index')])
 </div>
 
 <div class="result-line"><span><strong>{{ number_format($tests->total()) }}</strong> test{{ $tests->total() === 1 ? '' : 's' }} found</span>@if($demoAccess)<span class="demo-note">Only free demo tests are shown</span>@endif</div>
@@ -36,10 +30,13 @@
 <div class="card">
 <span class="badge">{{ strtoupper(str_replace('_',' ',$test->test_type)) }}</span>
 <h3>{{ $test->title }}</h3>
+<p><small>Set #{{ $test->id }}@if($test->subject) · {{ $test->subject->name }}@endif @if($test->topic) · {{ $test->topic->name }}@endif</small></p>
 @if($test->exam)<p>{{ $test->exam->name }}@if($test->exam->category) · {{ $test->exam->category->name }}@endif</p>@endif
 <p><strong>Questions:</strong> {{ $test->total_questions }}<br><strong>Duration:</strong> {{ $test->duration_minutes }} Minutes<br><strong>Positive Marks:</strong> {{ $test->positive_marks }}<br><strong>Negative Marks:</strong> {{ $test->negative_marks }}</p>
-@if($demoAccess || $enrollment?->test_limit === null)
+@if($demoAccess || ($enrollment && $enrollment->test_limit === null))
 <form method="POST" action="{{ route('student.tests.start',$test) }}">@csrf<button>Start Test</button></form>
+@elseif(!$enrollment)
+<button type="button" disabled>Active package required</button>
 @elseif(in_array($test->id,$completedIds,true))
 <span class="badge" style="background:#dcfce7;color:#166534">✓ Completed</span>
 @elseif(in_array($test->id,$selectedIds,true))

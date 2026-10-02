@@ -5,22 +5,17 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\Test;
 use App\Models\TestAttempt;
-use App\Models\Exam;
-use App\Models\ExamCategory;
 use App\Services\ExamEngineService;
 use App\Services\StudentTestAccessService;
+use App\Services\TestCatalogService;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class TestController extends Controller
 {
-    public function index(Request $request, StudentTestAccessService $access)
+    public function index(Request $request, StudentTestAccessService $access, TestCatalogService $catalog): View
     {
-        $filters = $request->validate([
-            'q' => ['nullable', 'string', 'max:100'],
-            'category' => ['nullable', 'integer'],
-            'exam' => ['nullable', 'integer'],
-            'type' => ['nullable', 'string', 'max:50'],
-        ]);
+        $filters = $catalog->filters($request);
         $demoAccess = (bool) $request->session()->get('demo_access', false);
         $student = $request->user()->studentProfile;
         $enrollment = $demoAccess ? null : ($student ? $access->activeEnrollment($student) : null);
@@ -28,45 +23,19 @@ class TestController extends Controller
         $attemptedIds = $enrollment ? $access->attemptedIds($enrollment) : [];
         $completedIds = $enrollment ? $access->completedIds($enrollment) : [];
 
-        $applyAccess = function ($query) use ($demoAccess, $enrollment) {
-            if ($demoAccess) return $query->where('is_demo', true);
-            if (! $enrollment) return $query->whereRaw('1 = 0');
-            if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
-            return $query;
-        };
+        $available = Test::where('is_active', true);
+        if ($demoAccess) {
+            $available->where('is_demo', true);
+        } elseif (! $enrollment) {
+            $available->whereRaw('1 = 0');
+        } elseif ($enrollment->package_exam_id) {
+            $available->where('exam_id', $enrollment->package_exam_id);
+        }
 
-        $tests = Test::with('exam.category')
-            ->where('is_active', true)
-            ->tap($applyAccess)
-            ->when($filters['category'] ?? null, fn ($query, $category) =>
-                $query->whereHas('exam', fn ($exam) => $exam->where('exam_category_id', $category)))
-            ->when($filters['exam'] ?? null, fn ($query, $exam) => $query->where('exam_id', $exam))
-            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('test_type', $type))
-            ->when($filters['q'] ?? null, function ($query, $search) {
-                $query->where(function ($nested) use ($search) {
-                    $nested->where('title', 'like', '%'.$search.'%')
-                        ->orWhereHas('exam', fn ($exam) => $exam->where('name', 'like', '%'.$search.'%'));
-                });
-            })
-            ->latest()
-            ->paginate(20)
-            ->withQueryString();
-
-        $testScope = function ($query) use ($demoAccess, $enrollment) {
-            $query->where('is_active', true);
-            if ($demoAccess) return $query->where('is_demo', true);
-            if (! $enrollment) return $query->whereRaw('1 = 0');
-            if ($enrollment->package_exam_id) $query->where('exam_id', $enrollment->package_exam_id);
-            return $query;
-        };
-        $categories = ExamCategory::whereHas('exams.tests', $testScope)->orderBy('name')->get(['id', 'name']);
-        $exams = Exam::whereHas('tests', $testScope)
-            ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('exam_category_id', $category))
-            ->orderBy('name')->get(['id', 'name', 'exam_category_id']);
-        $testTypes = Test::where('is_active', true)->tap($applyAccess)
-            ->whereNotNull('test_type')->distinct()->orderBy('test_type')->pluck('test_type');
-
-        return view('student.tests.index', compact('tests', 'categories', 'exams', 'testTypes', 'filters', 'demoAccess', 'enrollment', 'selectedIds', 'attemptedIds', 'completedIds'));
+        return view('student.tests.index', array_merge(
+            $catalog->browse($available, $filters),
+            compact('demoAccess', 'enrollment', 'selectedIds', 'attemptedIds', 'completedIds')
+        ));
     }
 
     public function select(Test $test, StudentTestAccessService $access)
@@ -74,7 +43,12 @@ class TestController extends Controller
         $student = auth()->user()->studentProfile;
         $enrollment = $student ? $access->activeEnrollment($student) : null;
         abort_unless($enrollment, 403, 'No active test package is assigned.');
-        try { $access->select($enrollment, $test); } catch (\RuntimeException $e) { return back()->withErrors(['package' => $e->getMessage()]); }
+        try {
+            $access->select($enrollment, $test);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['package' => $e->getMessage()]);
+        }
+
         return back()->with('success', 'Test added to your personal test pack.');
     }
 
@@ -83,7 +57,12 @@ class TestController extends Controller
         $student = auth()->user()->studentProfile;
         $enrollment = $student ? $access->activeEnrollment($student) : null;
         abort_unless($enrollment, 403);
-        try { $access->unselect($enrollment, $test); } catch (\RuntimeException $e) { return back()->withErrors(['package' => $e->getMessage()]); }
+        try {
+            $access->unselect($enrollment, $test);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['package' => $e->getMessage()]);
+        }
+
         return back()->with('success', 'Test removed from your pack.');
     }
 
@@ -102,7 +81,9 @@ class TestController extends Controller
             abort_if(in_array((int) $test->id, $access->completedIds($enrollment), true), 403, 'This subscribed test has already been completed.');
         }
         $attempt = $engine->start($test, $student);
-        if (isset($enrollment)) $access->syncUsage($enrollment);
+        if (isset($enrollment)) {
+            $access->syncUsage($enrollment);
+        }
 
         return redirect()->route('student.attempts.show', $attempt);
     }
@@ -110,19 +91,31 @@ class TestController extends Controller
     public function show(TestAttempt $attempt, ExamEngineService $engine)
     {
         $this->authorizeAttempt($attempt);
-        if ($attempt->status === 'evaluated') return redirect()->route('student.attempts.result', $attempt);
-        if ($engine->isExpired($attempt)) { $engine->submit($attempt); return redirect()->route('student.attempts.result', $attempt); }
+        if ($attempt->status === 'evaluated') {
+            return redirect()->route('student.attempts.result', $attempt);
+        }
+        if ($engine->isExpired($attempt)) {
+            $engine->submit($attempt);
+
+            return redirect()->route('student.attempts.result', $attempt);
+        }
         $attempt->load(['test', 'attemptQuestions.question.options', 'answers']);
         $deadline = $attempt->started_at->copy()->addMinutes($attempt->test->duration_minutes);
+
         return view('student.tests.exam', compact('attempt', 'deadline'));
     }
 
     public function answer(Request $request, TestAttempt $attempt, ExamEngineService $engine)
     {
         $this->authorizeAttempt($attempt);
-        if ($engine->isExpired($attempt)) { $engine->submit($attempt); return response()->json(['expired' => true], 409); }
-        $validated = $request->validate(['question_id' => ['required','integer'], 'selected_option_id' => ['nullable','integer'], 'marked_for_review' => ['nullable','boolean']]);
+        if ($engine->isExpired($attempt)) {
+            $engine->submit($attempt);
+
+            return response()->json(['expired' => true], 409);
+        }
+        $validated = $request->validate(['question_id' => ['required', 'integer'], 'selected_option_id' => ['nullable', 'integer'], 'marked_for_review' => ['nullable', 'boolean']]);
         $engine->saveAnswer($attempt, (int) $validated['question_id'], $validated['selected_option_id'] ?? null, (bool) ($validated['marked_for_review'] ?? false));
+
         return response()->json(['saved' => true]);
     }
 
@@ -130,6 +123,7 @@ class TestController extends Controller
     {
         $this->authorizeAttempt($attempt);
         $engine->submit($attempt);
+
         return redirect()->route('student.attempts.result', $attempt);
     }
 
@@ -142,6 +136,7 @@ class TestController extends Controller
             || ($attempt->test->answer_visibility === 'scheduled'
                 && $attempt->test->answers_available_at
                 && now()->greaterThanOrEqualTo($attempt->test->answers_available_at));
+
         return view('student.tests.result', compact('attempt', 'canReviewAnswers'));
     }
 

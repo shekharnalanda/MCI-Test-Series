@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Exam;
-use App\Models\ExamCategory;
 use App\Models\Test;
 use App\Models\TestAttempt;
 use App\Services\ExamEngineService;
 use App\Services\LibraryPracticeBridge;
 use App\Services\LibraryPracticeService;
+use App\Services\TestCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,11 +40,11 @@ class LibraryPracticeController extends Controller
         return $request->attributes->get('library_practice_account');
     }
 
-    public function index(Request $request, LibraryPracticeService $service, LibraryPracticeBridge $bridge): View
+    public function index(Request $request, LibraryPracticeService $service, LibraryPracticeBridge $bridge, TestCatalogService $catalog): View
     {
         $account = $this->account($request);
         $month = $service->month($account);
-        $filters = $request->validate(['category' => ['nullable', 'integer'], 'exam' => ['nullable', 'integer'], 'q' => ['nullable', 'string', 'max:100']]);
+        $filters = $catalog->filters($request);
         $eligible = true;
         try {
             $service->assertMembership($account, $bridge);
@@ -56,14 +55,7 @@ class LibraryPracticeController extends Controller
             ->where(fn ($q) => $q->whereNull('available_from')->orWhere('available_from', '<=', now()))
             ->where(fn ($q) => $q->whereNull('available_until')->orWhere('available_until', '>=', now()))
             ->whereHas('questions', fn ($q) => $q->where('questions.is_active', true)->where('questions.is_published', true));
-        $tests = Test::with('exam.category')->tap($available)
-            ->when($filters['category'] ?? null, fn ($q, $id) => $q->whereHas('exam', fn ($e) => $e->where('exam_category_id', $id)))
-            ->when($filters['exam'] ?? null, fn ($q, $id) => $q->where('exam_id', $id))
-            ->when($filters['q'] ?? null, fn ($q, $text) => $q->where('title', 'like', '%'.$text.'%'))
-            ->latest('id')->paginate(20)->withQueryString();
-        $examIds = Test::query()->tap($available)->whereNotNull('exam_id')->distinct()->pluck('exam_id');
-        $exams = Exam::whereIn('id', $examIds)->orderBy('name')->get();
-        $categories = ExamCategory::whereIn('id', $exams->pluck('exam_category_id')->filter()->unique())->orderBy('name')->get();
+        $catalogData = $catalog->browse(Test::query()->tap($available), $filters);
         $selections = DB::table('library_practice_selections')->where('library_practice_month_id', $month->id)->get()->keyBy('test_id');
         $selectedTests = Test::with('exam')->whereIn('id', $selections->keys())->get();
         $attempts = TestAttempt::with('test')->where('student_profile_id', $account->student_profile_id)
@@ -71,7 +63,7 @@ class LibraryPracticeController extends Controller
             ->latest('id')->paginate(10, ['*'], 'results_page');
         $completed = TestAttempt::whereIn('id', $selections->pluck('test_attempt_id')->filter())->where('status', 'evaluated')->count();
 
-        return view('library-practice.index', compact('account', 'month', 'filters', 'eligible', 'tests', 'categories', 'exams', 'selections', 'selectedTests', 'attempts', 'completed'));
+        return view('library-practice.index', array_merge($catalogData, compact('account', 'month', 'eligible', 'selections', 'selectedTests', 'attempts', 'completed')));
     }
 
     public function select(Request $request, Test $test, LibraryPracticeService $service, LibraryPracticeBridge $bridge): RedirectResponse

@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Exam;
+use App\Models\ExamCategory;
 use App\Models\Test;
 use App\Models\TestAttempt;
+use App\Models\Topic;
 use App\Models\User;
 use App\Services\LibraryPracticeBridge;
 use Database\Seeders\DatabaseSeeder;
@@ -125,6 +128,43 @@ class LibraryPracticeTest extends TestCase
         $this->get('/library-practice')->assertOk()->assertDontSee('Visible free practice');
         $test->update(['available_from' => null]);
         $this->get('/library-practice?exam='.$test->exam_id)->assertOk()->assertSee('Visible free practice');
+    }
+
+    public function test_category_filter_excludes_other_exams_and_keeps_monthly_selection_unchanged(): void
+    {
+        $sscCategory = ExamCategory::create(['name' => 'Catalog SSC', 'slug' => 'catalog-ssc']);
+        $policeCategory = ExamCategory::create(['name' => 'Catalog Police', 'slug' => 'catalog-police']);
+        $ssc = Exam::create(['exam_category_id' => $sscCategory->id, 'name' => 'Catalog SSC CGL', 'slug' => 'catalog-ssc-cgl']);
+        $police = Exam::create(['exam_category_id' => $policeCategory->id, 'name' => 'Catalog Bihar Police SI', 'slug' => 'catalog-bihar-police']);
+        $visible = $this->availableTest('SSC catalog set');
+        $visible->update(['exam_id' => $ssc->id]);
+        $hidden = $this->availableTest('Police catalog set');
+        $hidden->update(['exam_id' => $police->id, 'test_type' => 'full_mock']);
+        $this->loginLibrary();
+
+        $response = $this->get('/library-practice?category='.$sscCategory->id.'&exam='.$police->id);
+
+        $response->assertViewHas('exams', fn ($exams): bool => $exams->pluck('id')->all() === [$ssc->id])
+            ->assertViewHas('tests', fn ($tests): bool => $tests->pluck('id')->all() === [$visible->id])
+            ->assertViewHas('testTypes', fn ($types): bool => ! $types->contains('full_mock'))
+            ->assertSee('SSC catalog set')->assertDontSee('Police catalog set')->assertHeader('Server-Timing');
+        $this->assertSame(0, DB::table('library_practice_selections')->count());
+    }
+
+    public function test_library_catalog_accepts_subject_and_topic_and_rejects_invalid_input(): void
+    {
+        $test = $this->availableTest('Topic catalog set');
+        $question = $test->questions()->firstOrFail();
+        $topic = Topic::create(['subject_id' => $question->subject_id, 'name' => 'Catalog Chapter', 'slug' => 'catalog-chapter']);
+        $question->update(['topic_id' => $topic->id]);
+        $this->loginLibrary();
+
+        $response = $this->get('/library-practice?'.http_build_query(['exam' => $test->exam_id, 'subject' => $question->subject_id, 'topic' => $question->topic_id]));
+
+        $response->assertViewHas('filters', fn ($filters): bool => (int) $filters['subject'] === $question->subject_id && (int) $filters['topic'] === $question->topic_id)
+            ->assertSee('Topic catalog set')->assertSee('data-test-catalog', false);
+        $this->get('/library-practice?subject=abc')->assertSessionHasErrors('subject');
+        $this->assertSame(0, DB::table('library_practice_selections')->count());
     }
 
     public function test_library_login_is_single_use_and_does_not_replace_existing_paid_or_admin_login(): void
