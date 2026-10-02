@@ -61,8 +61,9 @@ class LibraryPracticeController extends Controller
             ->when($filters['exam'] ?? null, fn ($q, $id) => $q->where('exam_id', $id))
             ->when($filters['q'] ?? null, fn ($q, $text) => $q->where('title', 'like', '%'.$text.'%'))
             ->latest('id')->paginate(20)->withQueryString();
-        $categories = ExamCategory::whereHas('exams.tests', $available)->orderBy('name')->get();
-        $exams = Exam::whereHas('tests', $available)->orderBy('name')->get();
+        $examIds = Test::query()->tap($available)->whereNotNull('exam_id')->distinct()->pluck('exam_id');
+        $exams = Exam::whereIn('id', $examIds)->orderBy('name')->get();
+        $categories = ExamCategory::whereIn('id', $exams->pluck('exam_category_id')->filter()->unique())->orderBy('name')->get();
         $selections = DB::table('library_practice_selections')->where('library_practice_month_id', $month->id)->get()->keyBy('test_id');
         $selectedTests = Test::with('exam')->whereIn('id', $selections->keys())->get();
         $attempts = TestAttempt::with('test')->where('student_profile_id', $account->student_profile_id)

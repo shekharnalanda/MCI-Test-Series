@@ -114,6 +114,19 @@ class LibraryPracticeTest extends TestCase
         return $test;
     }
 
+    public function test_catalog_filters_remain_fresh_and_server_timing_is_exposed(): void
+    {
+        $test = $this->availableTest('Visible free practice');
+        $this->loginLibrary();
+        $this->get('/library-practice')->assertOk()->assertSee('Visible free practice')->assertHeader('Server-Timing');
+        $test->update(['is_active' => false]);
+        $this->get('/library-practice')->assertOk()->assertDontSee('Visible free practice');
+        $test->update(['is_active' => true, 'available_from' => now()->addDay()]);
+        $this->get('/library-practice')->assertOk()->assertDontSee('Visible free practice');
+        $test->update(['available_from' => null]);
+        $this->get('/library-practice?exam='.$test->exam_id)->assertOk()->assertSee('Visible free practice');
+    }
+
     public function test_library_login_is_single_use_and_does_not_replace_existing_paid_or_admin_login(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -309,6 +322,6 @@ class LibraryPracticeTest extends TestCase
         $url = app(LibraryPracticeBridge::class)->issue($this->identity, str_repeat('c', 64));
         DB::connection('library_practice_source')->table('library_student_sessions')->update(['token_hash' => str_repeat('d', 64)]);
         $this->get('/library-practice/enter?'.parse_url($url, PHP_URL_QUERY))->assertForbidden();
-        $this->assertSame(0,DB::table('library_practice_accounts')->count());
+        $this->assertSame(0, DB::table('library_practice_accounts')->count());
     }
 }
