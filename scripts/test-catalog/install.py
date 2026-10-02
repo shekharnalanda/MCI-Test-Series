@@ -75,7 +75,7 @@ def apply():
         current = target.read_bytes() if target.exists() else None
         if checksum(data) != entry['new']:
             raise RuntimeError('Staged checksum mismatch: ' + entry['path'])
-        if checksum(current) not in [entry['old'], entry['new']]:
+        if checksum(current) not in [entry['old'], entry['new']] + entry.get('previous_versions', []):
             raise RuntimeError('Live file requires review: ' + entry['path'])
         mode = target.stat().st_mode & 0o777 if target.exists() else 0o644
         staged.append((target, data, current, mode))
