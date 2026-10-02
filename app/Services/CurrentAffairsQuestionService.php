@@ -10,7 +10,8 @@ use RuntimeException;
 class CurrentAffairsQuestionService
 {
     public function __construct(
-        private QuestionIngestionService $ingestion
+        private QuestionIngestionService $ingestion,
+        private readonly CurrentAffairsTopicMappingService $topics,
     ) {}
 
     public function createQuestion(
@@ -34,53 +35,47 @@ class CurrentAffairsQuestionService
             'Current Affairs'
         )->firstOrFail();
 
+        $topic = $this->topics->topicForSource($subject, $item->source);
+
         $examIds = $questionData['exam_ids']
             ?? Exam::where('is_active', true)
                 ->pluck('id')
                 ->all();
 
         $payload = [
-            'question_text' =>
-                $questionData['question_text'],
+            'question_text' => $questionData['question_text'],
 
-            'question_text_hi' =>
-                $questionData['question_text_hi']
+            'question_text_hi' => $questionData['question_text_hi']
                 ?? null,
 
-            'explanation' =>
-                $questionData['explanation']
+            'explanation' => $questionData['explanation']
                 ?? $item->summary,
 
-            'explanation_hi' =>
-                $questionData['explanation_hi']
+            'explanation_hi' => $questionData['explanation_hi']
                 ?? null,
 
             'subject_id' => $subject->id,
+            'topic_id' => $topic?->id,
             'exam_ids' => $examIds,
 
-            'difficulty' =>
-                $questionData['difficulty']
+            'difficulty' => $questionData['difficulty']
                 ?? 'medium',
 
-            'language' =>
-                $questionData['language']
+            'language' => $questionData['language']
                 ?? 'bilingual',
 
             'is_current_affairs' => true,
 
-            'current_affair_date' =>
-                optional($item->published_at)
-                    ?->toDateString(),
+            'current_affair_date' => optional($item->published_at)
+                ?->toDateString(),
 
             'source_url' => $item->source_url,
             'source_reference' => $item->source?->slug, 'source_published_at' => optional($item->published_at)?->toDateString(),
 
-            'generation_method' =>
-                $questionData['generation_method']
+            'generation_method' => $questionData['generation_method']
                 ?? 'automated',
 
-            'options' =>
-                $questionData['options'],
+            'options' => $questionData['options'],
         ];
 
         $batch = $this->ingestion->ingest(

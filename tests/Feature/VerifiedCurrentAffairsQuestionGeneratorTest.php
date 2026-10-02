@@ -28,7 +28,7 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
                 'content_source_id' => $source->id,
                 'title' => "RBI imposes monetary penalty on {$entity}",
                 'summary' => "The Reserve Bank of India (RBI) has, by an order dated August 31, 2026, imposed a monetary penalty of {$amount} on {$entity} for non-compliance with specified directions.",
-                'source_url' => "https://rbi.org.in/release/{$index}",
+                'source_url' => "https://www.rbi.org.in/release/{$index}",
                 'published_at' => now(),
                 'fetched_at' => now(),
                 'content_hash' => hash('sha256', $entity),
@@ -47,6 +47,8 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
         $this->assertSame('bilingual', $question->language);
         $this->assertNotEmpty($question->question_text_hi);
         $this->assertSame('verified', $question->verification_status);
+        $this->assertSame('Economy and Banking', $question->topic->name);
+        $this->assertSame($question->subject_id, $question->topic->subject_id);
         $this->assertCount(4, $question->options);
         $this->assertSame(1, $question->options->where('is_correct', true)->count());
     }
@@ -65,7 +67,7 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
                 'content_source_id' => $source->id,
                 'title' => "RBI imposes monetary penalty on {$entity}",
                 'summary' => "The Reserve Bank of India (RBI) has, by an order dated August 31, 2026, imposed a monetary penalty of {$amount} on {$entity} for non-compliance with specified directions.",
-                'source_url' => "https://rbi.org.in/processed-release/{$index}",
+                'source_url' => "https://www.rbi.org.in/processed-release/{$index}",
                 'published_at' => now()->subDay(),
                 'fetched_at' => now()->subDay(),
                 'content_hash' => hash('sha256', "processed|{$entity}"),
@@ -82,7 +84,7 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
             'content_source_id' => $source->id,
             'title' => 'RBI imposes monetary penalty on Delta CIBIL Limited',
             'summary' => 'The Reserve Bank of India (RBI) has, by an order dated September 1, 2026, imposed a monetary penalty of ₹26,82,800 on Delta CIBIL Limited for non-compliance with specified directions.',
-            'source_url' => 'https://rbi.org.in/new-release',
+            'source_url' => 'https://www.rbi.org.in/new-release',
             'published_at' => now(),
             'fetched_at' => now(),
             'content_hash' => hash('sha256', 'new|Delta CIBIL Limited'),
@@ -120,7 +122,7 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
                 'content_source_id' => $source->id,
                 'title' => $title,
                 'summary' => $title,
-                'source_url' => "https://rbi.org.in/known-release/{$index}",
+                'source_url' => "https://www.rbi.org.in/known-release/{$index}",
                 'published_at' => now(),
                 'fetched_at' => now(),
                 'content_hash' => hash('sha256', "known|{$title}"),
@@ -140,6 +142,7 @@ class VerifiedCurrentAffairsQuestionGeneratorTest extends TestCase
             $this->assertNotEmpty($question->question_text_hi);
             $this->assertNotEmpty($question->explanation_hi);
             $this->assertSame('verified', $question->verification_status);
+            $this->assertSame('Economy and Banking', $question->topic->name);
             $this->assertCount(4, $question->options);
             $this->assertSame(1, $question->options->where('is_correct', true)->count());
         });

@@ -1,0 +1,12 @@
+[
+  {
+    "path": "app/Services/CurrentAffairsQuestionService.php",
+    "old": "f8a79f34b7b3e1b1e7fdef340beaad117ed526c63f480a0e8edb357b876657be",
+    "new": "c6729c4bd115c68db08caa6c45a1f6d620c892ced2452d67ef317507c1e5897a"
+  },
+  {
+    "path": "app/Services/CurrentAffairsTopicMappingService.php",
+    "old": null,
+    "new": "6f9cb8730ae9cf168afe0970746ed5c6f03d8f96c24f785b34db4132244ed94f"
+  }
+]
