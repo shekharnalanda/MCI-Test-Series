@@ -16,6 +16,8 @@ PRIVATE = HOME / 'mci-automation-backups'
 PHP = '/usr/local/bin/ea-php83'
 SOURCE = pathlib.Path(__file__).resolve().parents[2]
 MANIFEST = json.loads((SOURCE / 'scripts/automation/manifest.json').read_text())
+APPLY_SCRIPT = 'scripts/automation/apply.php'
+SUCCESS_MARKER = 'AUTOMATION_COMMITTED'
 MARKER = '# MCI_TEST_SERIES_SCHEDULER'
 OLD_CRON = '*/15 * * * * cd /home4/mcied45x/repositories/MCI-Test-Series && /opt/cpanel/ea-php83/root/usr/bin/php artisan schedule:run >> /home4/mcied45x/repositories/MCI-Test-Series/storage/logs/scheduler.log 2>&1 ' + MARKER
 NEW_CRON = '* * * * * /bin/bash /home4/mcied45x/repositories/MCI-Test-Series/scripts/scheduler-run.sh >> /home4/mcied45x/repositories/MCI-Test-Series/storage/logs/scheduler.log 2>&1 ' + MARKER
@@ -135,7 +137,7 @@ def apply():
                 raise RuntimeError('Private backup failed.')
         if entry['path'].endswith('.php'):
             run([PHP, '-l', str(SOURCE / entry['path'])], log)
-    run([PHP, '-l', str(SOURCE / 'scripts/automation/apply.php')], log)
+    run([PHP, '-l', str(SOURCE / APPLY_SCRIPT)], log)
     run(['/bin/bash', '-n', str(SOURCE / 'scripts/scheduler-run.sh')], log)
     if canonical_cron(read_cron()) != canonical_cron(old_cron):
         raise RuntimeError('Crontab changed during review.')
@@ -155,11 +157,11 @@ def apply():
             raise RuntimeError('Crontab changed before installation.')
         cron_written = True
         write_cron(new_cron)
-        run([PHP, str(SOURCE / 'scripts/automation/apply.php'), str(ROOT), str(backup)], log)
-        if 'AUTOMATION_COMMITTED' not in log.read_text():
+        run([PHP, str(SOURCE / APPLY_SCRIPT), str(ROOT), str(backup)], log)
+        if SUCCESS_MARKER not in log.read_text():
             raise RuntimeError('Verification did not confirm the transaction.')
         for line in log.read_text().splitlines():
-            if line.startswith(('VERIFIED |', 'AUTOMATION_COMMITTED')):
+            if line.startswith(('VERIFIED |', SUCCESS_MARKER)):
                 print(line, flush=True)
         run([PHP, 'artisan', 'up', '--no-interaction'], log)
         maintenance = False

@@ -205,6 +205,8 @@ class AutomationRefreshTest extends TestCase
         Http::preventStrayRequests();
         $rows = $this->fakeFacts(4)['results']['bindings'];
         $rows = array_map(function (array $row): array {
+            $row['country']['value'] = str_replace('https:', 'http:', $row['country']['value']);
+            $row['answer']['value'] = str_replace('https:', 'http:', $row['answer']['value']);
             foreach (['item', 'software', 'book'] as $entity) {
                 $row[$entity] = $row['country'];
                 $row[$entity.'LabelEn'] = $row['countryLabelEn'];
@@ -230,6 +232,24 @@ class AutomationRefreshTest extends TestCase
         }
         Http::assertSent(fn (Request $request) => str_contains($request['query'] ?? '', 'OFFSET 50') && str_contains($request['query'], 'FILTER(?otherAnswer != ?person)'));
         $this->assertSame(0, Cache::get('mci-question-bank-refresh-cursor')['family']);
+    }
+
+    public function test_http_wikidata_entity_identifiers_become_secure_verified_provenance_links(): void
+    {
+        $this->seed();
+        Http::preventStrayRequests();
+        $response = $this->fakeFacts(4);
+        foreach ($response['results']['bindings'] as &$row) {
+            $row['country']['value'] = str_replace('https:', 'http:', $row['country']['value']);
+        }
+        unset($row);
+        Http::fake(['https://www.wikidata.org*' => Http::response('ok'), 'https://query.wikidata.org/*' => Http::response($response)]);
+        $this->artisan('question-bank:refresh')->assertSuccessful();
+        $questions = Question::where('source_reference', 'wikidata-country-legislature')->get();
+        $this->assertCount(4, $questions);
+        $this->assertSame(['verified'], $questions->pluck('verification_status')->unique()->all());
+        $this->assertTrue($questions->every(fn ($q) => $q->is_published && str_starts_with($q->source_url, 'https://www.wikidata.org/entity/')));
+        Http::assertSent(fn (Request $request) => str_contains($request['query'] ?? '', 'wdt:P194'));
     }
 
     public function test_rbi_health_probes_the_actual_secure_feed_and_rejects_an_unrelated_host(): void

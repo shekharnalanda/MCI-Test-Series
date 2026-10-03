@@ -1,0 +1,22 @@
+[
+  {
+    "path": "app/Services/WikidataCountryFactImporter.php",
+    "old": "716484af8d1465fc355ab4457696f95cce29df0ad994be18321ef67a5a7c62d3",
+    "new": "cdd674c549e56eef6fe3e7791d2ef0ad403d83ba31c7fd367753fa8898cb7cf4"
+  },
+  {
+    "path": "app/Services/WikidataDiscoveryImporter.php",
+    "old": "18d12546dd66731af33e4c9cb840494070e063312ab5744c87f3b50c893ca644",
+    "new": "2d9a7940b207844fc9c98a692f7e034948e544e28aafb54cb135fe5bd41de40f"
+  },
+  {
+    "path": "app/Services/WikidataSoftwareImporter.php",
+    "old": "280f65187617d5c9703d9192ba5202eb8a3e34a146ef18316f6e3c331b0aa084",
+    "new": "20461dd65cf06c121e4db757377b610a986341124bd28187c65327751670633f"
+  },
+  {
+    "path": "app/Services/WikidataBookAuthorImporter.php",
+    "old": "960840f67792e0fdf12554443c4f9d1aea6a947530d6e649831bca7e2cd711dc",
+    "new": "e9a66cacdfa0212874ccf29a491d03ef86c3be53e4f45727b687e37d80c61681"
+  }
+]

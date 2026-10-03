@@ -11,6 +11,8 @@ Production entry point is `scripts/scheduler-run.sh`, invoked by cron every minu
 | Verified current affairs questions | Every hour at :25 | 10 per run |
 | Question bank refresh | Every hour at :40 | One family/page, at most 50 source rows |
 
+SPARQL entity identifiers arrive with HTTP URIs. Each importer converts only the exact official Wikidata entity URI to its HTTPS provenance link before ingestion, retaining the existing HTTPS publication guard. `repair_source_links.py` applies the four URL fixes and verifies/publishes only the bounded question IDs recorded by this deployment; it cannot touch original bank IDs, existing options or attached/attempted questions.
+
 Question refresh rotates 15 country fact families, discoveries, software and books, saving an independent page offset for each. It excludes multi-valued facts in the source query before pagination, requires complete Hindi/English facts and four distinct answers, and uses the existing trusted-source/ingestion checks. New legislature and single-time-zone templates provide additional Static GK facts. Short pages reset that family; HTTP/invalid-result failures retain the cursor. Reimports deduplicate without overwriting old questions or explanations. Other monthly imports are reduced to 50 rows. The existing manual import commands remain available.
 
 Monthly generation is opt-in on commands; legacy lifetime behavior remains the default. It appends tests/series and question pivots without editing old papers or attempts. Selection rotates exams by their oldest generation date and rejects identical question-ID sets. Monthly limits are checked under an exam-row lock. Student monthly quota rules are unchanged. A paper is created only if the existing verified/published/aligned question pool and difficulty requirements pass; insufficient or identical pools skip generation.
@@ -25,6 +27,6 @@ Outputs are available in `storage/logs/scheduler.log`, `storage/logs/automation.
 
 ## Validation
 
-61 relevant PHPUnit tests / 398 assertions and eight Python installer/scheduler checks pass. New coverage verifies monthly renewal, run caps, exam rotation, duplicate protection, old question/attempt preservation, trusted feed validation, source cursor recovery and GK/GS/Computer routing. Isolated SQLite deployment verification also runs before production installation.
+62 relevant PHPUnit tests / 403 assertions and eight Python installer/scheduler checks pass. New coverage verifies monthly renewal, run caps, exam rotation, duplicate protection, old question/attempt preservation, trusted feed validation, source cursor recovery and GK/GS/Computer routing. Isolated SQLite deployment verification also runs before production installation.
 
 Five pre-existing targeted tests fail on the unmodified parent: four assert a nonexistent `Question::is_verified` property, and one assumes seven active sources while the seed creates eight. Full-suite discovery also has a pre-existing private `GenerationReadinessTest::getConnection()` conflict with Laravel's protected method. These existing failures are not changed or masked by this work.

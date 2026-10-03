@@ -276,6 +276,9 @@ class WikidataCountryFactImporter
             'answer_hi' => data_get($row, 'answerLabelHi.value'),
         ];
 
+        // SPARQL entity identifiers use HTTP; provenance links use the secure official URL.
+        $fact['country_url'] = preg_replace('#^http://www\.wikidata\.org/entity/(Q[1-9][0-9]*)$#', 'https://www.wikidata.org/entity/$1', (string) $fact['country_url']);
+
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 

@@ -12,7 +12,7 @@
   {
     "path": "app/Services/WikidataCountryFactImporter.php",
     "old": "ebf6bed1beecd1049a0e9eefaa3814d565179c077dd67856ae5937806969152e",
-    "new": "716484af8d1465fc355ab4457696f95cce29df0ad994be18321ef67a5a7c62d3"
+    "new": "cdd674c549e56eef6fe3e7791d2ef0ad403d83ba31c7fd367753fa8898cb7cf4"
   },
   {
     "path": "app/Services/AutomaticTestGenerator.php",
@@ -37,17 +37,17 @@
   {
     "path": "app/Services/WikidataDiscoveryImporter.php",
     "old": "e03cf8930c7fef9cf4273d943baba43f564974727c33729cc2e3a2a2b0a06de9",
-    "new": "18d12546dd66731af33e4c9cb840494070e063312ab5744c87f3b50c893ca644"
+    "new": "2d9a7940b207844fc9c98a692f7e034948e544e28aafb54cb135fe5bd41de40f"
   },
   {
     "path": "app/Services/WikidataSoftwareImporter.php",
     "old": "3f0b8d1110538e2a413c768283d96ad672ea1ea40ae52eccb9e4f387b94d7b8f",
-    "new": "280f65187617d5c9703d9192ba5202eb8a3e34a146ef18316f6e3c331b0aa084"
+    "new": "20461dd65cf06c121e4db757377b610a986341124bd28187c65327751670633f"
   },
   {
     "path": "app/Services/WikidataBookAuthorImporter.php",
     "old": "918efaecb0cc5c95ca0381836f8cc8955d6f9a9a8dacdd838cc87a9fde4affe1",
-    "new": "960840f67792e0fdf12554443c4f9d1aea6a947530d6e649831bca7e2cd711dc"
+    "new": "e9a66cacdfa0212874ccf29a491d03ef86c3be53e4f45727b687e37d80c61681"
   },
   {
     "path": "app/Console/Commands/RefreshQuestionBank.php",

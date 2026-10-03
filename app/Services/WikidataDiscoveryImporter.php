@@ -122,6 +122,9 @@ class WikidataDiscoveryImporter
             'person_hi' => data_get($row, 'personLabelHi.value'),
         ];
 
+        // SPARQL entity identifiers use HTTP; provenance links use the secure official URL.
+        $fact['item_url'] = preg_replace('#^http://www\.wikidata\.org/entity/(Q[1-9][0-9]*)$#', 'https://www.wikidata.org/entity/$1', (string) $fact['item_url']);
+
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
