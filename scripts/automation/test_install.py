@@ -5,6 +5,7 @@ import io
 import pathlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SOURCE = pathlib.Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('catalog_installer', str(SOURCE / 'scripts/automation/install.py'))
@@ -104,6 +105,28 @@ class AutomationInstallerTest(unittest.TestCase):
             self.apply()
         self.assertEqual([], self.calls)
         self.assertFalse((self.root / 'scripts/scheduler-run.sh').exists())
+
+    def test_cpanel_shell_inserts_are_accepted_without_ignoring_job_or_other_env_changes(self):
+        canonical = self.cron
+        rewritten = b''.join(installer.CPANEL_SHELL + b'\n' + line for line in canonical.splitlines(keepends=True))
+        self.assertEqual(canonical, installer.canonical_cron(rewritten))
+        self.assertNotEqual(canonical, installer.canonical_cron(rewritten.replace(b'/bin/true', b'/bin/false')))
+        self.assertNotEqual(canonical, installer.canonical_cron(rewritten + b'PATH=/unreviewed\n'))
+
+    def test_real_cron_writer_verifies_the_known_server_rewrite_and_preserves_other_jobs(self):
+        requested = installer.updated_cron(self.cron)
+        rewritten = b''.join(installer.CPANEL_SHELL + b'\n' + line for line in requested.splitlines(keepends=True))
+        installer.read_cron = lambda: rewritten
+        real_writer = self.saved[-1]
+        with patch.object(installer.subprocess, 'run') as call:
+            call.return_value.returncode = 0
+            real_writer(requested)
+            self.assertEqual(requested, call.call_args.kwargs['input'])
+        installer.read_cron = lambda: rewritten.replace(b'/bin/true', b'/bin/false')
+        with patch.object(installer.subprocess, 'run') as call:
+            call.return_value.returncode = 0
+            with self.assertRaisesRegex(RuntimeError, 'could not be verified'):
+                real_writer(requested)
 
 
 if __name__ == '__main__':

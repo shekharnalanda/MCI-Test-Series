@@ -40,14 +40,27 @@ def read_cron():
     return result.stdout
 
 
+CPANEL_SHELL = b'SHELL="/usr/local/cpanel/bin/jailshell"'
+
+
+def canonical_cron(data):
+    # cPanel inserts this account's mandatory jailshell before each line.
+    # Compare all jobs/comments/env values exactly; tolerate only those inserts.
+    lines = data.splitlines(keepends=True)
+    if any(line.strip().startswith(b'SHELL=') and line.strip() != CPANEL_SHELL for line in lines):
+        return data
+    return b''.join(line for line in lines if line.strip() != CPANEL_SHELL)
+
+
 def write_cron(data):
+    data = canonical_cron(data)
     result = subprocess.run(['crontab', '-'], input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
-    if result.returncode or read_cron() != data:
+    if result.returncode or canonical_cron(read_cron()) != data:
         raise RuntimeError('Crontab update could not be verified.')
 
 
 def updated_cron(data):
-    lines = data.decode('utf-8').splitlines(keepends=True)
+    lines = canonical_cron(data).decode('utf-8').splitlines(keepends=True)
     matching = [index for index, line in enumerate(lines) if MARKER in line]
     if len(matching) != 1 or lines[matching[0]].strip() not in (OLD_CRON, NEW_CRON):
         raise RuntimeError('MCI cron changed since review; no entries were modified.')
@@ -124,7 +137,7 @@ def apply():
             run([PHP, '-l', str(SOURCE / entry['path'])], log)
     run([PHP, '-l', str(SOURCE / 'scripts/automation/apply.php')], log)
     run(['/bin/bash', '-n', str(SOURCE / 'scripts/scheduler-run.sh')], log)
-    if read_cron() != old_cron:
+    if canonical_cron(read_cron()) != canonical_cron(old_cron):
         raise RuntimeError('Crontab changed during review.')
     (backup / 'manifest.json').write_text(json.dumps(MANIFEST))
     print('REVIEWED | private backups ready | exact file/cron checksums | only MCI changes', flush=True)
@@ -138,7 +151,7 @@ def apply():
             write_file(target, data, mode)
             written.append((target, current, mode))
         run([PHP, 'artisan', 'list', '--raw', '--no-interaction'], log)
-        if read_cron() != old_cron:
+        if canonical_cron(read_cron()) != canonical_cron(old_cron):
             raise RuntimeError('Crontab changed before installation.')
         cron_written = True
         write_cron(new_cron)
@@ -156,9 +169,9 @@ def apply():
         if cron_written:
             # Never overwrite a concurrent crontab edit.
             current_cron = read_cron()
-            if current_cron == new_cron:
+            if canonical_cron(current_cron) == canonical_cron(new_cron):
                 write_cron(old_cron)
-            elif current_cron != old_cron:
+            elif canonical_cron(current_cron) != canonical_cron(old_cron):
                 print('STOPPED | concurrent cron edit needs review; private backup retained', flush=True)
         for target, current, mode in reversed(written):
             if current is None:
