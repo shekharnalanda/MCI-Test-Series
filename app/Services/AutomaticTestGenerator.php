@@ -18,7 +18,8 @@ class AutomaticTestGenerator
         int $questionCount = 25,
         string $difficulty = 'mixed',
         string $type = 'practice',
-        int $minPoolMultiple = 1
+        int $minPoolMultiple = 1,
+        ?int $monthlyLimit = null
     ): Test {
         if ($questionCount < 1 || $questionCount > 500) {
             throw new RuntimeException(
@@ -51,7 +52,7 @@ class AutomaticTestGenerator
 
                 if ($available < $required) {
                     throw new RuntimeException(
-                        "Difficulty gate: {$band} has {$available} eligible questions; " .
+                        "Difficulty gate: {$band} has {$available} eligible questions; ".
                         "{$required} required for balanced {$minPoolMultiple}x diversity."
                     );
                 }
@@ -115,15 +116,32 @@ class AutomaticTestGenerator
             $typeLabel,
             $typeLabelHi,
             $eligibleCount,
-            $minPoolMultiple
-        ) {
+            $minPoolMultiple,
+            $monthlyLimit
+        ): Test {
+            Exam::whereKey($exam->id)->lockForUpdate()->firstOrFail();
+            if ($monthlyLimit !== null && Test::where('exam_id', $exam->id)
+                ->where('test_type', $type)->where('auto_generated', true)
+                ->where('created_at', '>=', now('Asia/Kolkata')->startOfMonth()->utc())
+                ->count() >= $monthlyLimit) {
+                throw new RuntimeException('Monthly test limit reached.');
+            }
+            $ids = $questions->pluck('id')->all();
+            sort($ids);
+            $fingerprint = hash('sha256', implode(',', $ids));
+            $duplicate = Test::where('exam_id', $exam->id)->where('test_type', $type)
+                ->where('total_questions', count($ids))->has('questions', '=', count($ids))
+                ->whereHas('questions', fn ($q) => $q->whereIn('questions.id', $ids), '>=', count($ids))
+                ->exists();
+            if ($duplicate) {
+                throw new RuntimeException('An identical question set already exists; no duplicate paper created.');
+            }
             $series = TestSeries::firstOrCreate(
                 ['slug' => 'auto-'.$type.'-'.$exam->slug],
                 [
                     'exam_id' => $exam->id,
                     'name' => $exam->name.' Automatic '.$typeLabel.' Series',
-                    'name_hi' =>
-                        ($exam->name_hi ?: $exam->name).
+                    'name_hi' => ($exam->name_hi ?: $exam->name).
                         ' ऑटो '.$typeLabelHi.' सीरीज',
                     'series_type' => $type,
                     'price' => 0,
@@ -141,16 +159,13 @@ class AutomaticTestGenerator
                 'test_series_id' => $series->id,
                 'exam_id' => $exam->id,
 
-                'title' =>
-                    $exam->name.
+                'title' => $exam->name.
                     ' Auto '.$typeLabel.' '.$sequence,
 
-                'title_hi' =>
-                    ($exam->name_hi ?: $exam->name).
+                'title_hi' => ($exam->name_hi ?: $exam->name).
                     ' ऑटो '.$typeLabelHi.' '.$sequence,
 
-                'instructions' =>
-                    'Automatically generated from verified MCI Question Bank.',
+                'instructions' => 'Automatically generated from verified MCI Question Bank.',
 
                 'test_type' => $type,
                 'total_questions' => $questionCount,
@@ -183,6 +198,8 @@ class AutomaticTestGenerator
                     'eligible_pool_size' => $eligibleCount,
                     'minimum_pool_multiple' => $minPoolMultiple,
                     'generated_at' => now()->toIso8601String(),
+                    'question_fingerprint' => $fingerprint,
+                    'generation_cycle' => $monthlyLimit === null ? 'lifetime' : now('Asia/Kolkata')->format('Y-m'),
                 ],
             ]);
 
@@ -305,11 +322,9 @@ class AutomaticTestGenerator
             ->inRandomOrder()
             ->limit($candidateLimit)
             ->get()
-            ->groupBy(fn (Question $question): string =>
-                (string) ($question->topic_id ?? 'unclassified')
+            ->groupBy(fn (Question $question): string => (string) ($question->topic_id ?? 'unclassified')
             )
-            ->map(fn (Collection $questions): Collection =>
-                $questions->values()
+            ->map(fn (Collection $questions): Collection => $questions->values()
             );
 
         $selected = collect();

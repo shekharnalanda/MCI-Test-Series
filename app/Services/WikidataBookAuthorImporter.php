@@ -19,9 +19,10 @@ class WikidataBookAuthorImporter
         private readonly TrustedSourceHealthService $health,
     ) {}
 
-    public function import(int $limit = 500, bool $dryRun = false): array
+    public function import(int $limit = 500, bool $dryRun = false, int $offset = 0): array
     {
         $limit = max(10, min($limit, 500));
+        $offset = max(0, $offset);
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
         $source->refresh();
@@ -32,15 +33,21 @@ class WikidataBookAuthorImporter
 
         $response = Http::withHeaders(['Accept' => 'application/sparql-results+json'])
             ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
-            ->timeout(45)
+            ->connectTimeout(5)
+            ->timeout(25)
             ->retry(2, 750, throw: false)
-            ->get(self::ENDPOINT, ['query' => $this->query($limit), 'format' => 'json']);
+            ->get(self::ENDPOINT, ['query' => $this->query($limit, $offset), 'format' => 'json']);
 
         if (! $response->successful()) {
             throw new RuntimeException('Wikidata query failed with HTTP '.$response->status().'.');
         }
 
-        $facts = collect($response->json('results.bindings', []))
+        $rows = $response->json('results.bindings');
+        if (! is_array($rows)) {
+            throw new RuntimeException('Wikidata returned an invalid result; cursor was not advanced.');
+        }
+        $page = ['source_rows' => count($rows), 'next_offset' => count($rows) < $limit ? 0 : $offset + count($rows)];
+        $facts = collect($rows)
             ->map(fn (array $row) => $this->fact($row))
             ->filter()
             ->groupBy('book_url')
@@ -50,7 +57,7 @@ class WikidataBookAuthorImporter
         $authors = $facts->unique('author_url')->values();
 
         if ($facts->count() < 4 || $authors->count() < 4) {
-            throw new RuntimeException('At least four unambiguous bilingual books and authors are required.');
+            return ['fetched' => 0, 'accepted' => 0, 'duplicates' => 0, 'rejected' => count($rows), 'dry_run' => $dryRun] + $page;
         }
 
         $subject = Subject::where('name', 'General Knowledge')->firstOrFail();
@@ -90,7 +97,7 @@ class WikidataBookAuthorImporter
         })->all();
 
         if ($dryRun) {
-            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true];
+            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true] + $page;
         }
 
         $batch = $this->ingestion->ingest($questions, $source, 'json');
@@ -101,7 +108,7 @@ class WikidataBookAuthorImporter
             'duplicates' => $batch->duplicate_count,
             'rejected' => $batch->rejected_count,
             'dry_run' => false,
-        ];
+        ] + $page;
     }
 
     private function fact(array $row): ?array
@@ -115,10 +122,13 @@ class WikidataBookAuthorImporter
             'author_hi' => data_get($row, 'authorLabelHi.value'),
         ];
 
+        // SPARQL entity identifiers use HTTP; provenance links use the secure official URL.
+        $fact['book_url'] = preg_replace('#^http://www\.wikidata\.org/entity/(Q[1-9][0-9]*)$#', 'https://www.wikidata.org/entity/$1', (string) $fact['book_url']);
+
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
-    private function query(int $limit): string
+    private function query(int $limit, int $offset): string
     {
         return <<<SPARQL
 SELECT DISTINCT ?book ?bookLabelEn ?bookLabelHi ?author ?authorLabelEn ?authorLabelHi WHERE {
@@ -129,13 +139,15 @@ SELECT DISTINCT ?book ?bookLabelEn ?bookLabelHi ?author ?authorLabelEn ?authorLa
   ?author wdt:P31 wd:Q5;
           rdfs:label ?authorLabelEn;
           rdfs:label ?authorLabelHi.
+  FILTER NOT EXISTS { ?book wdt:P50 ?otherAnswer. FILTER(?otherAnswer != ?author) }
   FILTER(LANG(?bookLabelEn) = "en")
   FILTER(LANG(?bookLabelHi) = "hi")
   FILTER(LANG(?authorLabelEn) = "en")
   FILTER(LANG(?authorLabelHi) = "hi")
 }
-ORDER BY ?bookLabelEn ?authorLabelEn
+ORDER BY ?book ?author ?bookLabelEn ?authorLabelEn
 LIMIT {$limit}
+OFFSET {$offset}
 SPARQL;
     }
 }

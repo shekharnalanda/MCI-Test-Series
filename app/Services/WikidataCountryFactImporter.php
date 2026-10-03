@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ContentSource;
-use App\Models\Question;
 use App\Models\Subject;
 use App\Models\Topic;
 use Illuminate\Support\Collection;
@@ -16,6 +15,22 @@ class WikidataCountryFactImporter
     private const ENDPOINT = 'https://query.wikidata.org/sparql';
 
     private const FAMILIES = [
+        'legislature' => [
+            'property' => 'P194', 'topic' => 'Countries Capitals Currencies',
+            'reference' => 'wikidata-country-legislature',
+            'question_en' => 'Which is the national legislature of %s?',
+            'question_hi' => '%s का राष्ट्रीय विधानमंडल कौन सा है?',
+            'explanation_en' => '%s is the national legislature of %s, according to Wikidata.',
+            'explanation_hi' => 'विकिडाटा के अनुसार %s, %s का राष्ट्रीय विधानमंडल है।',
+        ],
+        'timezone' => [
+            'property' => 'P421', 'topic' => 'Countries Capitals Currencies',
+            'reference' => 'wikidata-country-timezone',
+            'question_en' => 'Which time zone is used in %s?',
+            'question_hi' => '%s में कौन सा समय क्षेत्र उपयोग किया जाता है?',
+            'explanation_en' => '%s is the time zone used in %s, according to Wikidata.',
+            'explanation_hi' => 'विकिडाटा के अनुसार %s, %s में उपयोग होने वाला समय क्षेत्र है।',
+        ],
         'currency' => [
             'property' => 'P38',
             'topic' => 'Countries Capitals Currencies',
@@ -146,10 +161,16 @@ class WikidataCountryFactImporter
         private readonly TrustedSourceHealthService $health,
     ) {}
 
-    public function import(string $family, int $limit = 200, bool $dryRun = false): array
+    public static function families(): array
+    {
+        return array_keys(self::FAMILIES);
+    }
+
+    public function import(string $family, int $limit = 200, bool $dryRun = false, int $offset = 0): array
     {
         $definition = self::FAMILIES[$family] ?? throw new InvalidArgumentException('Unsupported country fact family.');
         $limit = max(10, min($limit, 500));
+        $offset = max(0, $offset);
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
         $source->refresh();
@@ -160,10 +181,11 @@ class WikidataCountryFactImporter
 
         $response = Http::withHeaders(['Accept' => 'application/sparql-results+json'])
             ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
-            ->timeout(45)
+            ->connectTimeout(5)
+            ->timeout(25)
             ->retry(2, 750, throw: false)
             ->get(self::ENDPOINT, [
-                'query' => $this->query($family, $definition['property'], (bool) ($definition['literal'] ?? false), $limit),
+                'query' => $this->query($family, $definition['property'], (bool) ($definition['literal'] ?? false), $limit, $offset),
                 'format' => 'json',
             ]);
 
@@ -171,7 +193,12 @@ class WikidataCountryFactImporter
             throw new RuntimeException('Wikidata query failed with HTTP '.$response->status().'.');
         }
 
-        $facts = collect($response->json('results.bindings', []))
+        $rows = $response->json('results.bindings');
+        if (! is_array($rows)) {
+            throw new RuntimeException('Wikidata returned an invalid result; cursor was not advanced.');
+        }
+        $page = ['source_rows' => count($rows), 'next_offset' => count($rows) < $limit ? 0 : $offset + count($rows)];
+        $facts = collect($rows)
             ->map(fn (array $row) => $this->fact($row))
             ->filter()
             ->groupBy('country_url')
@@ -182,7 +209,7 @@ class WikidataCountryFactImporter
 
         $answers = $facts->unique('answer_url')->values();
         if ($answers->count() < 4) {
-            throw new RuntimeException('At least four unambiguous complete bilingual facts are required.');
+            return ['fetched' => 0, 'accepted' => 0, 'duplicates' => 0, 'rejected' => count($rows), 'dry_run' => $dryRun] + $page;
         }
 
         $subject = Subject::where('name', 'Static GK')->firstOrFail();
@@ -224,17 +251,7 @@ class WikidataCountryFactImporter
         })->all();
 
         if ($dryRun) {
-            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true];
-        }
-
-        // Refresh explanations for already imported facts as source facts are reprocessed.
-        foreach ($questions as $question) {
-            Question::where('source_reference', $question['source_reference'])
-                ->where('source_url', $question['source_url'])
-                ->update([
-                    'explanation' => $question['explanation'],
-                    'explanation_hi' => $question['explanation_hi'],
-                ]);
+            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true] + $page;
         }
 
         $batch = $this->ingestion->ingest($questions, $source, 'json');
@@ -245,7 +262,7 @@ class WikidataCountryFactImporter
             'duplicates' => $batch->duplicate_count,
             'rejected' => $batch->rejected_count,
             'dry_run' => false,
-        ];
+        ] + $page;
     }
 
     private function fact(array $row): ?array
@@ -259,10 +276,13 @@ class WikidataCountryFactImporter
             'answer_hi' => data_get($row, 'answerLabelHi.value'),
         ];
 
+        // SPARQL entity identifiers use HTTP; provenance links use the secure official URL.
+        $fact['country_url'] = preg_replace('#^http://www\.wikidata\.org/entity/(Q[1-9][0-9]*)$#', 'https://www.wikidata.org/entity/$1', (string) $fact['country_url']);
+
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
-    private function query(string $family, string $property, bool $literal, int $limit): string
+    private function query(string $family, string $property, bool $literal, int $limit, int $offset): string
     {
         $entityPattern = $family === 'india-state-capital'
             ? 'VALUES ?administrativeType { wd:Q12443800 wd:Q467745 }'.PHP_EOL.'  ?country wdt:P31 ?administrativeType;'
@@ -282,12 +302,14 @@ SELECT DISTINCT ?country ?countryLabelEn ?countryLabelHi ?answer ?answerLabelEn 
            rdfs:label ?countryLabelHi.
   {$answerPattern}
   FILTER NOT EXISTS { ?country wdt:P576 ?dissolvedDate. }
+  FILTER NOT EXISTS { ?country wdt:{$property} ?otherAnswer. FILTER(?otherAnswer != ?answer) }
   FILTER(LANG(?countryLabelEn) = "en")
   FILTER(LANG(?countryLabelHi) = "hi")
   {$answerLanguageFilters}
 }
-ORDER BY ?countryLabelEn ?answerLabelEn
+ORDER BY ?country ?answer ?countryLabelEn ?answerLabelEn
 LIMIT {$limit}
+OFFSET {$offset}
 SPARQL;
     }
 }

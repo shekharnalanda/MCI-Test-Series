@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schedule;
 |
 | Server cron only needs to run:
 |
-| php artisan schedule:run
+| /bin/bash scripts/scheduler-run.sh
 |
 | every minute. Laravel controls actual execution frequency below.
 |
@@ -22,14 +22,14 @@ Schedule::command(
     ->withoutOverlapping();
 
 Schedule::command(
-    'mci:current-affairs-fetch --limit=100'
+    'mci:current-affairs-fetch --limit=30'
 )
     ->hourlyAt(10)
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
 Schedule::command(
-    'mci:current-affairs-generate-verified --limit=50'
+    'mci:current-affairs-generate-verified --limit=10'
 )
     ->hourlyAt(25)
     ->timezone('Asia/Kolkata')
@@ -103,119 +103,123 @@ Schedule::command(
     ->withoutOverlapping(30);
 
 Schedule::command(
-    'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice --max-per-exam=10'
+    'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice --max-per-exam=10 --cycle=monthly --max-total=3'
 )
-    ->dailyAt('03:00')
+    ->hourlyAt(0)
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
 Schedule::command(
-    'test-series:generate --per-exam=1 --questions=100 --difficulty=mixed --type=full_mock --max-per-exam=5'
+    'test-series:generate --per-exam=1 --questions=100 --difficulty=mixed --type=full_mock --max-per-exam=5 --cycle=monthly --max-total=1'
 )
-    ->dailyAt('03:10')
+    ->hourlyAt(5)
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
 Schedule::command(
-    'mci:wikidata-capitals --limit=150'
+    'question-bank:refresh --limit=50'
 )
-    ->dailyAt('03:30')
+    ->hourlyAt(40)
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
-Schedule::command('test-series:chapters --category=ssc --category=bihar-police')
-    ->dailyAt('03:20')
+Schedule::command('test-series:chapters --category=ssc --category=bihar-police --cycle=monthly --max-per-chapter=2 --max-total=3')
+    ->hourlyAt(20)
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 
-Schedule::command(
-    'mci:wikidata-country-facts --family=all --limit=300'
-)
-    ->weeklyOn(1, '03:40')
-    ->timezone('Asia/Kolkata')
-    ->withoutOverlapping(60);
-
-Schedule::command('mci:wikidata-elements --limit=150')
+Schedule::command('mci:wikidata-elements --limit=50')
     ->monthlyOn(1, '03:50')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-discoveries --limit=500')
+Schedule::command('mci:wikidata-discoveries --limit=50')
     ->monthlyOn(8, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-software --limit=500')
+Schedule::command('mci:wikidata-software --limit=50')
     ->monthlyOn(9, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-programming-languages --limit=500')
+Schedule::command('mci:wikidata-programming-languages --limit=50')
     ->monthlyOn(10, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-books --limit=500')
+Schedule::command('mci:wikidata-books --limit=50')
     ->monthlyOn(11, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-organization-headquarters --limit=500')
+Schedule::command('mci:wikidata-organization-headquarters --limit=50')
     ->monthlyOn(12, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-organization-inception-years --limit=500')
+Schedule::command('mci:wikidata-organization-inception-years --limit=50')
     ->monthlyOn(13, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-software-release-years --limit=500')
+Schedule::command('mci:wikidata-software-release-years --limit=50')
     ->monthlyOn(14, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-software-licenses --limit=500')
+Schedule::command('mci:wikidata-software-licenses --limit=50')
     ->monthlyOn(15, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-software-programming-languages --limit=500')
+Schedule::command('mci:wikidata-software-programming-languages --limit=50')
     ->monthlyOn(16, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-element-atomic-numbers --limit=250')
+Schedule::command('mci:wikidata-element-atomic-numbers --limit=50')
     ->monthlyOn(17, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-award-inception-years --limit=500')
+Schedule::command('mci:wikidata-award-inception-years --limit=50')
     ->monthlyOn(18, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-world-heritage-countries --limit=500')
+Schedule::command('mci:wikidata-world-heritage-countries --limit=50')
     ->monthlyOn(19, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-stadium-countries --limit=500')
+Schedule::command('mci:wikidata-stadium-countries --limit=50')
     ->monthlyOn(20, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-airport-countries --limit=500')
+Schedule::command('mci:wikidata-airport-countries --limit=50')
     ->monthlyOn(21, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('mci:wikidata-university-countries --limit=500')
+Schedule::command('mci:wikidata-university-countries --limit=50')
     ->monthlyOn(22, '04:00')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(60);
 
-Schedule::command('question-bank:retry-imports --limit=10 --chunk=500 --strict')
+Schedule::command('question-bank:retry-imports --limit=1 --chunk=50 --strict')
     ->hourlyAt(35)
     ->withoutOverlapping(55)
     ->appendOutputTo(storage_path('logs/question-import-retry.log'));
+
+// Keep bounded automation output for review without changing unrelated log destinations.
+foreach (app(Illuminate\Console\Scheduling\Schedule::class)->events() as $event) {
+    if (str_contains($event->command ?? '', 'question-bank:refresh')
+        || str_contains($event->command ?? '', 'test-series:generate')
+        || str_contains($event->command ?? '', 'test-series:chapters')
+        || str_contains($event->command ?? '', 'mci:current-affairs-fetch')
+        || str_contains($event->command ?? '', 'mci:current-affairs-generate-verified')) {
+        $event->appendOutputTo(storage_path('logs/automation.log'));
+    }
+}

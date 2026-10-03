@@ -35,19 +35,24 @@ class ChapterTestGenerator
             ->with('subject')->orderBy('id')->get();
     }
 
-    public function generate(Exam $exam, Topic $topic, int $questionCount = 25): Test
+    public function generate(Exam $exam, Topic $topic, int $questionCount = 25, ?int $monthlyLimit = null): Test
     {
         if (! $exam->is_active || ! $topic->is_active || $questionCount < 10 || $questionCount > 100) {
             throw new RuntimeException('An active exam/chapter and 10–100 questions are required.');
         }
 
-        return DB::transaction(function () use ($exam, $topic, $questionCount): Test {
+        return DB::transaction(function () use ($exam, $topic, $questionCount, $monthlyLimit): Test {
             // Serialize creation for this exam so repeated or overlapping jobs are safe.
             Exam::whereKey($exam->id)->lockForUpdate()->firstOrFail();
             $existing = Test::where('exam_id', $exam->id)->where('is_active', true)
                 ->chapter((int) $topic->subject_id, (int) $topic->id)->first();
-            if ($existing) {
+            if ($existing && $monthlyLimit === null) {
                 return $existing;
+            }
+            if ($monthlyLimit !== null && Test::where('exam_id', $exam->id)->where('topic_id', $topic->id)
+                ->where('test_type', 'topic')->where('auto_generated', true)
+                ->where('created_at', '>=', now('Asia/Kolkata')->startOfMonth()->utc())->count() >= $monthlyLimit) {
+                throw new RuntimeException('Monthly chapter limit reached.');
             }
             $query = $this->eligibleQuery($exam, $topic);
             $pool = (clone $query)->count();
@@ -58,6 +63,14 @@ class ChapterTestGenerator
             if ($questions->count() !== $questionCount) {
                 throw new RuntimeException('The chapter question pool changed during generation.');
             }
+            $ids = $questions->modelKeys();
+            sort($ids);
+            if (Test::where('exam_id', $exam->id)->where('topic_id', $topic->id)->where('test_type', 'topic')
+                ->where('total_questions', count($ids))->has('questions', '=', count($ids))
+                ->whereHas('questions', fn ($q) => $q->whereIn('questions.id', $ids), '>=', count($ids))->exists()) {
+                throw new RuntimeException('An identical chapter set already exists; waiting for more questions.');
+            }
+            $sequence = Test::where('exam_id', $exam->id)->where('topic_id', $topic->id)->where('test_type', 'topic')->count() + 1;
             $series = TestSeries::firstOrCreate(['slug' => 'chapter-'.$exam->slug.'-'.$topic->id], [
                 'exam_id' => $exam->id, 'name' => $exam->name.' — '.$topic->name,
                 'series_type' => 'topic', 'price' => 0, 'is_free' => false, 'is_active' => true,
@@ -65,8 +78,8 @@ class ChapterTestGenerator
             $test = Test::create([
                 'test_series_id' => $series->id, 'exam_id' => $exam->id,
                 'subject_id' => $topic->subject_id, 'topic_id' => $topic->id,
-                'title' => $exam->name.' — '.$topic->name.' — Chapter Test',
-                'title_hi' => ($exam->name_hi ?: $exam->name).' — '.($topic->name_hi ?: $topic->name).' — अध्याय टेस्ट',
+                'title' => $exam->name.' — '.$topic->name.' — Chapter Test '.$sequence,
+                'title_hi' => ($exam->name_hi ?: $exam->name).' — '.($topic->name_hi ?: $topic->name).' — अध्याय टेस्ट '.$sequence,
                 'instructions' => 'This test contains only verified questions from the selected chapter.',
                 'test_type' => 'topic', 'total_questions' => $questionCount,
                 'duration_minutes' => max(10, $questionCount), 'positive_marks' => 1, 'negative_marks' => 0.25,
@@ -74,6 +87,8 @@ class ChapterTestGenerator
                 'auto_generated' => true, 'is_demo' => false, 'is_active' => true,
                 'generation_rules' => ['chapter_only' => true, 'subject_id' => $topic->subject_id,
                     'topic_id' => $topic->id, 'question_count' => $questionCount, 'eligible_pool_size' => $pool,
+                    'question_fingerprint' => hash('sha256', implode(',', $ids)),
+                    'generation_cycle' => $monthlyLimit === null ? 'lifetime' : now('Asia/Kolkata')->format('Y-m'),
                     'selection' => 'least_used', 'verified_only' => true, 'published_only' => true],
             ]);
             $sync = [];

@@ -1,0 +1,62 @@
+[
+  {
+    "path": "routes/console.php",
+    "old": "cd9c79adc9a86053ab590eb36b4bec6f937eac7b2e010a87b03648dda4e439f9",
+    "new": "9b41b689c86d5ad8848fc916be59faa6f5d4c10c2aed6d45c68dab1e21e213ec"
+  },
+  {
+    "path": "app/Services/TrustedSourceHealthService.php",
+    "old": "63cb216118d6f2116371b2a1651ced55402245751c7142effb56a59fad2e6406",
+    "new": "8c3d734589e15902fd358630e0bdf32f20d2200a865c33ede10aa53d22459a75"
+  },
+  {
+    "path": "app/Services/WikidataCountryFactImporter.php",
+    "old": "ebf6bed1beecd1049a0e9eefaa3814d565179c077dd67856ae5937806969152e",
+    "new": "cdd674c549e56eef6fe3e7791d2ef0ad403d83ba31c7fd367753fa8898cb7cf4"
+  },
+  {
+    "path": "app/Services/AutomaticTestGenerator.php",
+    "old": "9935de64e77b2b8524305ae326ce4017c85cd84164a1125f146d6576ccd67a6e",
+    "new": "566d58f2ac00a6a085708062442cb00b3680739bdd71a0b5b412ab3ac6d635fb"
+  },
+  {
+    "path": "app/Console/Commands/GenerateAutomaticTestSeries.php",
+    "old": "8f370cf9d957be52ce806fbe520d7bbd71a40b80b302ec66978341f28e47b58c",
+    "new": "a715d971a52cdb03fcbc7da3cb2e7e34a11b17fb4dfd34d911c5f5069c7ae0ab"
+  },
+  {
+    "path": "app/Console/Commands/GenerateChapterTests.php",
+    "old": "29ac12a5cc326c00cab192253c2f40f3b6869fe9f00a36996321c01eff92a130",
+    "new": "e607eeee3182874330cb0f5b0c58f07aa840ba2f8422fec8766ce6c7ad954ad4"
+  },
+  {
+    "path": "app/Services/ChapterTestGenerator.php",
+    "old": "51813f641763a1e2acad2e38840188830fa1611d07de45f20e448e72a6adb7d1",
+    "new": "9019e3a815e6ab5cfc52bfadfae844f4b72511b9dc3e30ceb3dac94064f4673e"
+  },
+  {
+    "path": "app/Services/WikidataDiscoveryImporter.php",
+    "old": "e03cf8930c7fef9cf4273d943baba43f564974727c33729cc2e3a2a2b0a06de9",
+    "new": "2d9a7940b207844fc9c98a692f7e034948e544e28aafb54cb135fe5bd41de40f"
+  },
+  {
+    "path": "app/Services/WikidataSoftwareImporter.php",
+    "old": "3f0b8d1110538e2a413c768283d96ad672ea1ea40ae52eccb9e4f387b94d7b8f",
+    "new": "20461dd65cf06c121e4db757377b610a986341124bd28187c65327751670633f"
+  },
+  {
+    "path": "app/Services/WikidataBookAuthorImporter.php",
+    "old": "918efaecb0cc5c95ca0381836f8cc8955d6f9a9a8dacdd838cc87a9fde4affe1",
+    "new": "e9a66cacdfa0212874ccf29a491d03ef86c3be53e4f45727b687e37d80c61681"
+  },
+  {
+    "path": "app/Console/Commands/RefreshQuestionBank.php",
+    "old": null,
+    "new": "6d98e43a5a9434c106a84827fc24078a5332b7cc32f23dae1c8a6c3e2a944538"
+  },
+  {
+    "path": "scripts/scheduler-run.sh",
+    "old": null,
+    "new": "558a3f7a5878565b2e37e41fd7cf03e8edbd844078025d797bb4c6a218a0c537"
+  }
+]
