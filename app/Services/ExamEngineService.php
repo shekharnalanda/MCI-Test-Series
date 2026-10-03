@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AttemptAnswer;
 use App\Models\AttemptQuestion;
+use App\Models\QuestionOption;
 use App\Models\StudentProfile;
 use App\Models\Test;
 use App\Models\TestAttempt;
@@ -14,7 +15,7 @@ class ExamEngineService
 {
     public function start(Test $test, StudentProfile $student): TestAttempt
     {
-        if (!$test->is_active) {
+        if (! $test->is_active) {
             throw new RuntimeException('This test is not active.');
         }
 
@@ -26,6 +27,11 @@ class ExamEngineService
 
         if ($existing) {
             return $existing;
+        }
+
+        if ($test->test_type === 'topic' && $test->topic_id
+            && ! Test::whereKey($test->id)->chapter((int) $test->subject_id, (int) $test->topic_id)->exists()) {
+            throw new RuntimeException('This chapter test is incomplete or contains questions from another chapter.');
         }
 
         return DB::transaction(function () use ($test, $student) {
@@ -107,14 +113,14 @@ class ExamEngineService
             ->where('question_id', $questionId)
             ->exists();
 
-        if (!$allowed) {
+        if (! $allowed) {
             throw new RuntimeException(
                 'Question does not belong to this attempt.'
             );
         }
 
         if ($selectedOptionId !== null) {
-            $validOption = \App\Models\QuestionOption::where(
+            $validOption = QuestionOption::where(
                 'id',
                 $selectedOptionId
             )->where(
@@ -122,7 +128,7 @@ class ExamEngineService
                 $questionId
             )->exists();
 
-            if (!$validOption) {
+            if (! $validOption) {
                 throw new RuntimeException(
                     'Selected option does not belong to this question.'
                 );
@@ -167,7 +173,7 @@ class ExamEngineService
 
                 $answer = $answers->get($snapshot->question_id);
 
-                if (!$answer || !$answer->selected_option_id) {
+                if (! $answer || ! $answer->selected_option_id) {
                     continue;
                 }
 
@@ -234,7 +240,7 @@ class ExamEngineService
 
     public function isExpired(TestAttempt $attempt): bool
     {
-        if (!$attempt->started_at) {
+        if (! $attempt->started_at) {
             return false;
         }
 

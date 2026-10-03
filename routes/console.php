@@ -67,14 +67,12 @@ Schedule::command(
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
 
-
 Schedule::command(
     'question-bank:prune-source-checks --days=90'
 )
     ->weeklyOn(0, '02:20')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
-
 
 Schedule::command(
     'question-bank:source-health-report --hours=24 --fail-on-unhealthy'
@@ -83,14 +81,12 @@ Schedule::command(
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
 
-
 Schedule::command(
     'question-bank:recover-imports --stale-minutes=30'
 )
     ->everyFifteenMinutes()
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(20);
-
 
 Schedule::command(
     'question-bank:audit-import-quality --hours=24 --strict'
@@ -99,14 +95,12 @@ Schedule::command(
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
 
-
 Schedule::command(
     'question-bank:audit-bilingual --strict'
 )
     ->dailyAt('02:35')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(30);
-
 
 Schedule::command(
     'test-series:generate --per-exam=1 --questions=25 --difficulty=mixed --type=practice --max-per-exam=10'
@@ -126,6 +120,11 @@ Schedule::command(
     'mci:wikidata-capitals --limit=150'
 )
     ->dailyAt('03:30')
+    ->timezone('Asia/Kolkata')
+    ->withoutOverlapping(45);
+
+Schedule::command('test-series:chapters --category=ssc --category=bihar-police')
+    ->dailyAt('03:20')
     ->timezone('Asia/Kolkata')
     ->withoutOverlapping(45);
 

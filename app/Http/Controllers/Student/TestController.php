@@ -80,7 +80,11 @@ class TestController extends Controller
             abort_unless($access->allows($enrollment, $test), 403, 'This test is not included in your package.');
             abort_if(in_array((int) $test->id, $access->completedIds($enrollment), true), 403, 'This subscribed test has already been completed.');
         }
-        $attempt = $engine->start($test, $student);
+        try {
+            $attempt = $engine->start($test, $student);
+        } catch (\RuntimeException $error) {
+            return back()->withErrors(['test' => $error->getMessage()]);
+        }
         if (isset($enrollment)) {
             $access->syncUsage($enrollment);
         }

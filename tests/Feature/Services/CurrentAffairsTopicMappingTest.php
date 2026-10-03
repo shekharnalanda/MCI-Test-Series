@@ -56,7 +56,8 @@ class CurrentAffairsTopicMappingTest extends TestCase
         ]);
         $excludedBefore = $excluded->mapWithKeys(fn (Question $q): array => [$q->id => $q->fresh()->getRawOriginal()])->all();
         $exam = Exam::where('name', 'SSC CGL')->firstOrFail();
-        $paper = Test::create(['exam_id' => $exam->id, 'title' => 'RBI practice', 'test_type' => 'practice']);
+        $paper = Test::create(['exam_id' => $exam->id, 'title' => 'RBI practice', 'test_type' => 'topic',
+            'subject_id' => $subject->id, 'topic_id' => $subject->topics()->where('slug', 'economy-and-banking')->firstOrFail()->id, 'total_questions' => 1]);
         $paper->questions()->attach($question);
         $backups = [];
 

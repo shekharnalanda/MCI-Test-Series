@@ -61,7 +61,7 @@
     </div>
     <div class="catalog-actions"><button type="submit">खोजें / Apply</button><a href="{{ $catalogRoute }}">सभी फ़िल्टर हटाएँ</a></div>
 </form>
-<p class="catalog-help">विषय/अध्याय के अनुसार वे पूरे टेस्ट दिखते हैं जिनमें उस भाग के प्रश्न हैं। मिश्रित सेट में अन्य विषयों के प्रश्न भी रहेंगे।</p>
+<p class="catalog-help">अध्याय चुनने पर केवल उसी अध्याय के प्रश्नों वाले पूरे टेस्ट दिखेंगे। सभी अध्याय चुनने पर मिश्रित और विषय से संबंधित सेट भी दिखेंगे।</p>
 <noscript><p class="catalog-help">हर चयन के बाद “खोजें / Apply” दबाएँ, फिर अगला विकल्प चुनें।</p></noscript>
 <script>
 (() => {

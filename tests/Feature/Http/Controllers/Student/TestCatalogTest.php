@@ -5,8 +5,11 @@ namespace Tests\Feature\Http\Controllers\Student;
 use App\Models\Exam;
 use App\Models\ExamCategory;
 use App\Models\Package;
+use App\Models\Question;
 use App\Models\StudentProfile;
+use App\Models\Subject;
 use App\Models\Test;
+use App\Models\Topic;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -70,6 +73,25 @@ class TestCatalogTest extends TestCase
 
         $response->assertRedirect('/student/tests')->assertSessionHasErrors('topic');
         $this->assertSame(0, DB::table('student_enrollment_tests')->count());
+    }
+
+    public function test_a_selected_chapter_that_became_invalid_returns_a_message_without_consuming_an_attempt(): void
+    {
+        $student = $this->student();
+        $subject = Subject::create(['name' => 'Maths', 'slug' => 'maths']);
+        $topic = Topic::create(['subject_id' => $subject->id, 'name' => 'Percentage', 'slug' => 'percentage']);
+        $test = Test::create(['title' => 'Chapter set', 'test_type' => 'topic', 'subject_id' => $subject->id, 'topic_id' => $topic->id, 'total_questions' => 1]);
+        $question = Question::create(['subject_id' => $subject->id, 'topic_id' => $topic->id, 'question_text' => 'Percentage QA', 'content_hash' => hash('sha256', 'Percentage QA'), 'is_published' => true, 'verification_status' => 'verified']);
+        $test->questions()->attach($question);
+        $this->actingAs($student)->post(route('student.tests.select', $test))->assertSessionHasNoErrors();
+        $question->update(['topic_id' => null]);
+
+        $this->from('/student/tests')->post(route('student.tests.start', $test))
+            ->assertRedirect('/student/tests')->assertSessionHasErrors('test');
+
+        $this->assertSame(0, DB::table('test_attempts')->count());
+        $this->assertSame(0, (int) DB::table('student_enrollments')->value('tests_used'));
+        $this->assertSame(10, DB::table('student_enrollments')->value('test_limit'));
     }
 
     public function test_catalog_escapes_search_text(): void
