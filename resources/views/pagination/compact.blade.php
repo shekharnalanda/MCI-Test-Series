@@ -1,7 +1,7 @@
 @if ($paginator->hasPages())
     @once
         <style>
-            .mci-pagination{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:100%;margin:20px 0;padding:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:#334155}
+            .mci-pagination{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:100%;margin:20px 0;padding:0;background:#fff;border:0;box-shadow:none;position:static;font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:#334155}
             .mci-pagination *{box-sizing:border-box}
             .mci-pagination .mci-pagination-summary{margin:0;font-size:13px;color:#475569}
             .mci-pagination .mci-pagination-links{display:flex;flex-wrap:wrap;align-items:center;gap:6px;max-width:100%;margin:0;padding:0;list-style:none}
