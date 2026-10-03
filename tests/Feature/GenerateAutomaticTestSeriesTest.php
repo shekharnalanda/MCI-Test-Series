@@ -17,7 +17,7 @@ class GenerateAutomaticTestSeriesTest extends TestCase
 
         $before = DB::table('tests')->where('auto_generated', true)->count();
 
-        $this->artisan('test-series:generate --questions=5 --per-exam=1')
+        $this->artisan('test-series:generate --questions=5 --per-exam=1 --min-pool-multiple=1')
             ->assertSuccessful();
 
         $after = DB::table('tests')->where('auto_generated', true)->count();
@@ -34,7 +34,7 @@ class GenerateAutomaticTestSeriesTest extends TestCase
         $this->seed(DatabaseSeeder::class);
 
         $this->artisan(
-            'test-series:generate --questions=5 --per-exam=2 --max-per-exam=1'
+            'test-series:generate --questions=5 --per-exam=2 --max-per-exam=1 --min-pool-multiple=1'
         )->assertSuccessful();
 
         $overCap = DB::table('tests')

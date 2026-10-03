@@ -156,7 +156,9 @@ class LibraryPracticeTest extends TestCase
         $test = $this->availableTest('Topic catalog set');
         $question = $test->questions()->firstOrFail();
         $topic = Topic::create(['subject_id' => $question->subject_id, 'name' => 'Catalog Chapter', 'slug' => 'catalog-chapter']);
-        $question->update(['topic_id' => $topic->id]);
+        $question->update(['topic_id' => $topic->id, 'verification_status' => 'verified']);
+        $test->questions()->update(['topic_id' => $topic->id, 'verification_status' => 'verified']);
+        $test->update(['test_type' => 'topic', 'subject_id' => $question->subject_id, 'topic_id' => $topic->id]);
         $this->loginLibrary();
 
         $response = $this->get('/library-practice?'.http_build_query(['exam' => $test->exam_id, 'subject' => $question->subject_id, 'topic' => $question->topic_id]));

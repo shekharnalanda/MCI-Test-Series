@@ -69,6 +69,7 @@ class TestCatalogService
         }
 
         $topics = empty($filters['subject']) ? collect() : Topic::where('subject_id', $filters['subject'])
+            ->where('is_active', true)
             ->whereIn('id', (clone $questions)->where('subject_id', $filters['subject'])->distinct()->pluck('topic_id')
                 ->merge(Test::whereIn('id', $testIds)->distinct()->pluck('topic_id'))->filter()->unique())
             ->orderBy('name')->get(['id', 'name']);
@@ -103,6 +104,12 @@ class TestCatalogService
     private function contentFilter(Builder $tests, array $filters): void
     {
         if (empty($filters['subject'])) {
+            return;
+        }
+
+        if (! empty($filters['topic'])) {
+            $tests->chapter((int) $filters['subject'], (int) $filters['topic']);
+
             return;
         }
 

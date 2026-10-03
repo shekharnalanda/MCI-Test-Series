@@ -1,0 +1,42 @@
+[
+  {
+    "path": "app/Models/Test.php",
+    "old": "96b118083035025f2e3c300b49c27cfd478c93cd022dc94059892acadba51bf8",
+    "new": "8eff45787437f4eefb4edd762926f6714607a888a5abf05af0c4b7df13b275e6"
+  },
+  {
+    "path": "app/Services/ExamEngineService.php",
+    "old": "6e4344f19f9417bb5b8fc8ffbcdb3e36174378fc9cb24fd3b5fe0d1d0da444cd",
+    "new": "98d8d9b1f2679c2ec4d3c843748f8cc19b5e56fa9e67287c4908233de34c0339"
+  },
+  {
+    "path": "app/Services/TestCatalogService.php",
+    "old": "2cf32bd14d129caf0d13755e3aef7b7304212c66661386a005b47c043327012f",
+    "new": "2c9a85dbea86d2e25cb4d5cd1b1a6443eaecce7d2dab954d8975b15c7bec5f8a"
+  },
+  {
+    "path": "app/Services/ChapterTestGenerator.php",
+    "old": null,
+    "new": "51813f641763a1e2acad2e38840188830fa1611d07de45f20e448e72a6adb7d1"
+  },
+  {
+    "path": "app/Console/Commands/GenerateChapterTests.php",
+    "old": null,
+    "new": "29ac12a5cc326c00cab192253c2f40f3b6869fe9f00a36996321c01eff92a130"
+  },
+  {
+    "path": "app/Http/Controllers/Student/TestController.php",
+    "old": "cf63d1a4a6858a8c84e3159f10992ace5fd30b5bc8edfe2f29dd180c12902d9b",
+    "new": "dc66a121e5bbffeb077dad4fa17834c4278dad6e38db031c74426bcc6f92ad10"
+  },
+  {
+    "path": "resources/views/layouts/test-catalog-filters.blade.php",
+    "old": "e8b0d237ce1a4099fb41cfcea959298cb7bf15e80aa9474d4fe5c72ea3986ed2",
+    "new": "fe5f3b485686b699f787e47ee5a9a6e1c4ba8c637f6df40e50aba12b56bc8243"
+  },
+  {
+    "path": "routes/console.php",
+    "old": "c001013969f16762b70d70dde581510c25f2af87fb30d2307e1d14d0479da346",
+    "new": "cd9c79adc9a86053ab590eb36b4bec6f937eac7b2e010a87b03648dda4e439f9"
+  }
+]

@@ -34,7 +34,7 @@ class TestCatalogServiceTest extends TestCase
         $topic = Topic::firstOrCreate(['subject_id' => $subject->id, 'slug' => str($topicName)->slug()->toString()], ['name' => $topicName]);
         $question = Question::create(array_merge([
             'subject_id' => $subject->id, 'topic_id' => $topic->id, 'question_text' => $topicName,
-            'content_hash' => hash('sha256', $test->id.$topicName), 'is_active' => true, 'is_published' => true,
+            'content_hash' => hash('sha256', $test->id.$topicName), 'is_active' => true, 'is_published' => true, 'verification_status' => 'verified',
         ], $attributes));
         $test->questions()->attach($question);
 
@@ -89,6 +89,7 @@ class TestCatalogServiceTest extends TestCase
         $profit = $this->paper($ssc);
         $other = $this->paper($police);
         $q = $this->question($percentage, 'Mathematics', 'Percentage');
+        $percentage->update(['test_type' => 'topic', 'subject_id' => $q->subject_id, 'topic_id' => $q->topic_id, 'total_questions' => 1]);
         $this->question($profit, 'Mathematics', 'Profit and Loss');
         $this->question($other, 'Law', 'Police Law');
         $this->question($profit, 'Draft Subject', 'Draft Topic', ['is_published' => false]);
@@ -121,7 +122,8 @@ class TestCatalogServiceTest extends TestCase
         $exam = $this->exam('SSC CGL', 'SSC');
         $subject = Subject::create(['name' => 'Reasoning', 'slug' => 'reasoning']);
         $topic = Topic::create(['subject_id' => $subject->id, 'name' => 'Series', 'slug' => 'series']);
-        $paper = $this->paper($exam, 'topic', ['subject_id' => $subject->id, 'topic_id' => $topic->id]);
+        $paper = $this->paper($exam, 'topic', ['subject_id' => $subject->id, 'topic_id' => $topic->id, 'total_questions' => 1]);
+        $this->question($paper, 'Reasoning', 'Series');
 
         $catalog = $this->browse(['exam' => $exam->id, 'subject' => $subject->id, 'topic' => $topic->id, 'type' => 'topic']);
 
