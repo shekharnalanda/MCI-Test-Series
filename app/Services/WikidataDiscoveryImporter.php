@@ -19,9 +19,10 @@ class WikidataDiscoveryImporter
         private readonly TrustedSourceHealthService $health,
     ) {}
 
-    public function import(int $limit = 500, bool $dryRun = false): array
+    public function import(int $limit = 500, bool $dryRun = false, int $offset = 0): array
     {
         $limit = max(10, min($limit, 500));
+        $offset = max(0, $offset);
         $source = ContentSource::where('slug', 'wikidata')->where('is_active', true)->firstOrFail();
         $this->health->check($source);
         $source->refresh();
@@ -32,15 +33,21 @@ class WikidataDiscoveryImporter
 
         $response = Http::withHeaders(['Accept' => 'application/sparql-results+json'])
             ->withUserAgent('MCI-Test-Series/1.0 (+https://test.mciedu.com)')
-            ->timeout(45)
+            ->connectTimeout(5)
+            ->timeout(25)
             ->retry(2, 750, throw: false)
-            ->get(self::ENDPOINT, ['query' => $this->query($limit), 'format' => 'json']);
+            ->get(self::ENDPOINT, ['query' => $this->query($limit, $offset), 'format' => 'json']);
 
         if (! $response->successful()) {
             throw new RuntimeException('Wikidata query failed with HTTP '.$response->status().'.');
         }
 
-        $facts = collect($response->json('results.bindings', []))
+        $rows = $response->json('results.bindings');
+        if (! is_array($rows)) {
+            throw new RuntimeException('Wikidata returned an invalid result; cursor was not advanced.');
+        }
+        $page = ['source_rows' => count($rows), 'next_offset' => count($rows) < $limit ? 0 : $offset + count($rows)];
+        $facts = collect($rows)
             ->map(fn (array $row) => $this->fact($row))
             ->filter()
             ->groupBy('item_url')
@@ -50,7 +57,7 @@ class WikidataDiscoveryImporter
         $people = $facts->unique('person_url')->values();
 
         if ($facts->count() < 4 || $people->count() < 4) {
-            throw new RuntimeException('At least four unambiguous bilingual discovery facts and people are required.');
+            return ['fetched' => 0, 'accepted' => 0, 'duplicates' => 0, 'rejected' => count($rows), 'dry_run' => $dryRun] + $page;
         }
 
         $subject = Subject::where('name', 'General Science')->firstOrFail();
@@ -90,7 +97,7 @@ class WikidataDiscoveryImporter
         })->all();
 
         if ($dryRun) {
-            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true];
+            return ['fetched' => count($questions), 'accepted' => count($questions), 'duplicates' => 0, 'rejected' => 0, 'dry_run' => true] + $page;
         }
 
         $batch = $this->ingestion->ingest($questions, $source, 'json');
@@ -101,7 +108,7 @@ class WikidataDiscoveryImporter
             'duplicates' => $batch->duplicate_count,
             'rejected' => $batch->rejected_count,
             'dry_run' => false,
-        ];
+        ] + $page;
     }
 
     private function fact(array $row): ?array
@@ -118,7 +125,7 @@ class WikidataDiscoveryImporter
         return collect($fact)->every(fn ($value) => is_string($value) && trim($value) !== '') ? $fact : null;
     }
 
-    private function query(int $limit): string
+    private function query(int $limit, int $offset): string
     {
         return <<<SPARQL
 SELECT DISTINCT ?item ?itemLabelEn ?itemLabelHi ?person ?personLabelEn ?personLabelHi WHERE {
@@ -128,13 +135,15 @@ SELECT DISTINCT ?item ?itemLabelEn ?itemLabelHi ?person ?personLabelEn ?personLa
   ?person wdt:P31 wd:Q5;
           rdfs:label ?personLabelEn;
           rdfs:label ?personLabelHi.
+  FILTER NOT EXISTS { ?item wdt:P61 ?otherAnswer. FILTER(?otherAnswer != ?person) }
   FILTER(LANG(?itemLabelEn) = "en")
   FILTER(LANG(?itemLabelHi) = "hi")
   FILTER(LANG(?personLabelEn) = "en")
   FILTER(LANG(?personLabelHi) = "hi")
 }
-ORDER BY ?itemLabelEn ?personLabelEn
+ORDER BY ?item ?person ?itemLabelEn ?personLabelEn
 LIMIT {$limit}
+OFFSET {$offset}
 SPARQL;
     }
 }

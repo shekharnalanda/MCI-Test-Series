@@ -23,7 +23,8 @@ class TrustedSourceHealthService
             return $this->record($source, true, null, 'internal_source', $checkedAt);
         }
 
-        if (! $this->isSecureUrl($source->base_url)) {
+        if (! $this->isSecureUrl($source->base_url) || ! $this->isSecureUrl($this->probeUrl($source))
+            || preg_replace('/^www\./i', '', (string) parse_url($this->probeUrl($source), PHP_URL_HOST)) !== preg_replace('/^www\./i', '', (string) parse_url($source->base_url, PHP_URL_HOST))) {
             $source->forceFill(['last_checked_at' => $checkedAt])->save();
 
             return $this->record($source, false, null, 'invalid_https_url', $checkedAt);
@@ -35,6 +36,7 @@ class TrustedSourceHealthService
                 'Accept-Language' => 'en-IN,en;q=0.9,hi;q=0.8',
             ])
                 ->withUserAgent('Mozilla/5.0 (compatible; MCI-Test-Series-Source-Monitor/1.0; +https://test.mciedu.com)')
+                ->connectTimeout(5)
                 ->timeout(12)
                 ->retry(2, 250, throw: false)
                 ->get($this->probeUrl($source));
@@ -92,7 +94,6 @@ class TrustedSourceHealthService
         ];
     }
 
-
     private function updateQuarantineState(
         ContentSource $source,
         bool $healthy,
@@ -149,7 +150,7 @@ class TrustedSourceHealthService
     private function probeUrl(ContentSource $source): string
     {
         return match ($source->slug) {
-            'press-information-bureau' => (string) ($source->feed_url ?: $source->base_url),
+            'press-information-bureau', 'reserve-bank-of-india' => (string) ($source->feed_url ?: $source->base_url),
             'upsc' => 'https://www.upsc.gov.in/examinations/active-exams',
             'ssc' => 'https://ssc.gov.in/',
             'nta' => 'https://nta.ac.in/',
