@@ -5,8 +5,8 @@
 @endsection
 @section('fullwidth')
 <!-- Homepage tile likes and views; comments are intentionally not enabled. -->
-<link rel="stylesheet" href="/tile-engagement.css?v=20261106-1">
-<script src="/tile-engagement.js?v=20261106-1" data-endpoint="/tile-engagement.php" data-tiles=".exam-card,.feature-grid>.feature" defer></script>
+<link rel="stylesheet" href="/tile-engagement.css?v=20261106-2">
+<script src="/tile-engagement.js?v=20261106-2" data-endpoint="/tile-engagement.php" data-tiles=".exam-card,.feature-grid>.feature" defer></script>
 
 <div class="home">
 <section class="hero"><div class="hero-grid"><div class="hero-copy"><span class="eyebrow">✓ Trusted bilingual exam preparation</span><h1>Prepare smarter.<br><span>Perform with confidence.</span></h1><p>एक ही professional platform पर SSC, Railway, Banking, UPSC, BPSC, Bihar Police, Teaching और अन्य प्रतियोगी परीक्षाओं के mock tests, practice sets और detailed performance analysis.</p><div class="hero-actions"><a class="btn btn-gold" href="#demo-tests">Start Free Demo</a><a class="btn btn-outline" href="#exams">Explore All Exams</a></div><div class="hero-points"><span>✓ Hindi + English</span><span>✓ Exam-style interface</span><span>✓ Instant result &amp; analysis</span></div></div><aside class="hero-panel"><div class="panel-head"><strong>Popular Test Categories</strong><span class="live">● LIVE</span></div><div class="mini-list">@foreach(['SSC & Railway'=>'Mock + Practice','Banking Exams'=>'Prelims + Mains','UPSC & BPSC'=>'GS + Current Affairs','Bihar Police'=>'Complete Series','Teaching Exams'=>'Topic-wise Tests'] as $name=>$type)<div class="mini"><strong>{{ $name }}</strong><span>{{ $type }}</span></div>@endforeach</div></aside></div></section>
